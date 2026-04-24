@@ -1,0 +1,38 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300..700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+:root {
+  color-scheme: light;
+}
+
+html, body {
+  background: theme('colors.cream.DEFAULT');
+  color: theme('colors.ink.DEFAULT');
+  font-family: 'Geist', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  background-image:
+    radial-gradient(at 15% 0%, rgba(184,118,61,0.05) 0, transparent 45%),
+    radial-gradient(at 85% 100%, rgba(45,74,62,0.05) 0, transparent 45%);
+  background-attachment: fixed;
+}
+
+/* Variable font weight shorthand */
+.font-display {
+  font-family: 'Instrument Serif', Georgia, serif;
+  letter-spacing: -0.02em;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(26, 24, 22, 0.16);
+  border-radius: 3px;
+}

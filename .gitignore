@@ -1,0 +1,28 @@
+node_modules/
+.next/
+.turbo/
+dist/
+out/
+
+# env
+.env
+.env.local
+.env*.local
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+
+# editor
+.vscode/
+.idea/
+*.swp
+
+# logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# drizzle
+drizzle/meta/_journal.json.bak
