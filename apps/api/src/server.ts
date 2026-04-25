@@ -37,6 +37,7 @@ await app.register(shoppingRoutes, { prefix: '/family/shopping' });
 await app.register(chatRoutes, { prefix: '/chat' });
 await app.register(layoutRoutes, { prefix: '/me/layout' });
 
+// ─── Migrasjoner ved oppstart ───
 {
   const { drizzle } = await import('drizzle-orm/postgres-js');
   const { migrate } = await import('drizzle-orm/postgres-js/migrator');
@@ -75,6 +76,39 @@ await app.register(layoutRoutes, { prefix: '/me/layout' });
 
   await migrationClient.end();
   app.log.info('Migrasjoner ferdig');
+}
+
+// ─── Engangs: oppdater familie-medlemmer ───
+if (process.env.MIGRATE_MEMBERS === 'true') {
+  const { db, users } = await import('@hallakompis/db');
+  const { eq } = await import('drizzle-orm');
+
+  app.log.info('MIGRATE_MEMBERS: oppdaterer medlemmer');
+
+  // Goberg → Lars
+  await db.update(users)
+    .set({ name: 'Lars', displayName: 'Lars' })
+    .where(eq(users.name, 'Goberg'));
+
+  // Ida → AnneK
+  await db.update(users)
+    .set({ name: 'AnneK', displayName: 'AnneK' })
+    .where(eq(users.name, 'Ida'));
+
+  // Emma → Jes (gutt)
+  await db.update(users)
+    .set({ name: 'Jes', displayName: 'Jes' })
+    .where(eq(users.name, 'Emma'));
+
+  // Noah → Jack (gutt)
+  await db.update(users)
+    .set({ name: 'Jack', displayName: 'Jack' })
+    .where(eq(users.name, 'Noah'));
+
+  // Slett Olivia
+  await db.delete(users).where(eq(users.name, 'Olivia'));
+
+  app.log.info('MIGRATE_MEMBERS: ferdig');
 }
 
 if (process.env.SEED_ON_STARTUP === 'true') {
