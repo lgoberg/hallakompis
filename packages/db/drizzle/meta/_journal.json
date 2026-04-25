@@ -8,6 +8,13 @@
       "when": 1777074645390,
       "tag": "0000_noisy_pete_wisdom",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1777148713725,
+      "tag": "0001_memory_system",
+      "breakpoints": true
     }
   ]
 }
