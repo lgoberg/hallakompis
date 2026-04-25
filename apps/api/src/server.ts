@@ -44,6 +44,7 @@ await app.register(layoutRoutes, { prefix: '/me/layout' });
   const postgresMod = await import('postgres');
   const { resolve, dirname } = await import('node:path');
   const { fileURLToPath } = await import('node:url');
+  const fs = await import('node:fs');
 
   const __dirname = dirname(fileURLToPath(import.meta.url));
   const migrationsFolder = resolve(__dirname, '../../../packages/db/drizzle');
@@ -59,6 +60,13 @@ await app.register(layoutRoutes, { prefix: '/me/layout' });
     await mdb.execute(sql`DROP SCHEMA IF EXISTS public CASCADE`);
     await mdb.execute(sql`DROP SCHEMA IF EXISTS drizzle CASCADE`);
     await mdb.execute(sql`CREATE SCHEMA public`);
+  }
+
+  try {
+    const files = fs.readdirSync(migrationsFolder);
+    app.log.info(`Innhold i migrations-mappa: ${JSON.stringify(files)}`);
+  } catch (e) {
+    app.log.error(`Kan ikke lese migrations-mappa: ${(e as Error).message}`);
   }
 
   app.log.info(`Kjører migrasjoner fra ${migrationsFolder}`);
