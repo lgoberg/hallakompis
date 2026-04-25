@@ -52,7 +52,10 @@ await app.register(layoutRoutes, { prefix: '/me/layout' });
   const migrationsFolder = resolve(__dirname, '../../../packages/db/drizzle');
 
   app.log.info(`Kjører migrasjoner fra ${migrationsFolder}`);
-  const migrationClient = postgresMod.default(process.env.DATABASE_URL!, { max: 1 });
+  const migrationClient = postgresMod.default(
+  process.env.MIGRATION_DATABASE_URL ?? process.env.DATABASE_URL!,
+  { max: 1 }
+);
   await migrate(drizzle(migrationClient), { migrationsFolder });
   await migrationClient.end();
   app.log.info('Migrasjoner ferdig');
