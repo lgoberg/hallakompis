@@ -40,6 +40,23 @@ await app.register(shoppingRoutes, { prefix: '/family/shopping' });
 await app.register(chatRoutes, { prefix: '/chat' });
 await app.register(layoutRoutes, { prefix: '/me/layout' });
 
+{
+  const { drizzle } = await import('drizzle-orm/postgres-js');
+  const { migrate } = await import('drizzle-orm/postgres-js/migrator');
+  const postgresMod = await import('postgres');
+  const { resolve, dirname } = await import('node:path');
+  const { fileURLToPath } = await import('node:url');
+
+  const __dirname = dirname(fileURLToPath(import.meta.url));
+  // I runtime ligger migrasjonene på /app/packages/db/drizzle
+  const migrationsFolder = resolve(__dirname, '../../../packages/db/drizzle');
+
+  app.log.info(`Kjører migrasjoner fra ${migrationsFolder}`);
+  const migrationClient = postgresMod.default(process.env.DATABASE_URL!, { max: 1 });
+  await migrate(drizzle(migrationClient), { migrationsFolder });
+  await migrationClient.end();
+  app.log.info('Migrasjoner ferdig');
+}
 const port = Number(process.env.PORT ?? 3001);
 const host = process.env.HOST ?? '0.0.0.0';
 
