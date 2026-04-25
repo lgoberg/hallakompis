@@ -24,10 +24,15 @@ RUN pnpm --filter @hallakompis/api build
 FROM node:20-alpine
 WORKDIR /app
 ENV NODE_ENV=production
-COPY --from=build /repo/apps/api/dist ./dist
-COPY --from=build /repo/apps/api/node_modules ./node_modules
-COPY --from=build /repo/packages ./packages
-COPY --from=build /repo/apps/api/package.json ./package.json
 
+COPY --from=build /repo/node_modules /app/node_modules
+COPY --from=build /repo/package.json /app/package.json
+COPY --from=build /repo/pnpm-workspace.yaml /app/pnpm-workspace.yaml
+COPY --from=build /repo/apps/api/dist /app/apps/api/dist
+COPY --from=build /repo/apps/api/node_modules /app/apps/api/node_modules
+COPY --from=build /repo/apps/api/package.json /app/apps/api/package.json
+COPY --from=build /repo/packages /app/packages
+
+WORKDIR /app/apps/api
 EXPOSE 3001
 CMD ["node", "dist/server.js"]
