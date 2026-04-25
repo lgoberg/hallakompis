@@ -45,6 +45,7 @@ await app.register(shoppingRoutes, { prefix: '/family/shopping' });
 await app.register(chatRoutes, { prefix: '/chat' });
 await app.register(layoutRoutes, { prefix: '/me/layout' });
 
+// ─── Migrasjoner ───
 {
   const { drizzle } = await import('drizzle-orm/postgres-js');
   const { migrate } = await import('drizzle-orm/postgres-js/migrator');
@@ -86,11 +87,6 @@ await app.register(layoutRoutes, { prefix: '/me/layout' });
     throw e;
   }
 
-  const result = await mdb.execute(
-    sql`SELECT table_name FROM information_schema.tables WHERE table_schema='public' ORDER BY table_name`
-  );
-  app.log.info(`Tabeller i public-schema: ${JSON.stringify(result.map((r: any) => r.table_name))}`);
-
   // Gi vanlig API-user tilgang til public-schemaet
   if (process.env.APP_DB_USER) {
     app.log.info(`Gir ${process.env.APP_DB_USER} tilgang til public`);
@@ -104,6 +100,72 @@ await app.register(layoutRoutes, { prefix: '/me/layout' });
 
   await migrationClient.end();
   app.log.info('Migrasjoner ferdig');
+}
+
+// ─── Seed (kun hvis SEED_ON_STARTUP=true og DB er tom) ───
+if (process.env.SEED_ON_STARTUP === 'true') {
+  const { db } = await import('@hallakompis/db');
+  const { households, users, shoppingItems, tasks, ideas } = await import('@hallakompis/db');
+
+  const existing = await db.select().from(households).limit(1);
+  if (existing.length > 0) {
+    app.log.info('Seed: Husstand finnes allerede, hopper over');
+  } else {
+    app.log.info('Seed: Oppretter familien Goberg');
+
+    const [household] = await db.insert(households).values({ name: 'Familien Goberg' }).returning();
+    if (!household) throw new Error('Klarte ikke opprette husstand');
+
+    const [goberg] = await db.insert(users).values({
+      householdId: household.id,
+      name: 'Goberg',
+      displayName: 'Goberg',
+      role: 'adult',
+      avatarColor: '#B8763D',
+      uiPreference: {
+        kaller_meg: 'Goberg',
+        tone: 'nøytral',
+        språk: 'nb-NO',
+        bekreft_før_handling: true,
+      },
+    }).returning();
+
+    const [ida] = await db.insert(users).values({
+      householdId: household.id,
+      name: 'Ida',
+      displayName: 'Ida',
+      role: 'adult',
+      avatarColor: '#7A8D7A',
+    }).returning();
+
+    await db.insert(users).values([
+      { householdId: household.id, name: 'Emma', role: 'child', avatarColor: '#C45C48' },
+      { householdId: household.id, name: 'Noah', role: 'child', avatarColor: '#6B4A6B' },
+      { householdId: household.id, name: 'Olivia', role: 'child', avatarColor: '#DAA94E' },
+    ]);
+
+    if (!goberg) throw new Error('Klarte ikke opprette bruker');
+
+    await db.insert(shoppingItems).values([
+      { householdId: household.id, content: 'Melk — 2L', category: 'meieri', addedBy: goberg.id },
+      { householdId: household.id, content: 'Smør', category: 'meieri', addedBy: ida?.id },
+      { householdId: household.id, content: 'Bananer', category: 'frukt', addedBy: goberg.id },
+      { householdId: household.id, content: 'Kaffe — Solberg & Hansen', category: 'annet', addedBy: goberg.id },
+    ]);
+
+    await db.insert(tasks).values([
+      { userId: goberg.id, content: 'Godkjenne mix — Skarvik', priority: 'high', listType: 'today' },
+      { userId: goberg.id, content: 'Signere kontrakt Nordvind', priority: 'high', listType: 'today' },
+      { userId: goberg.id, content: 'Bestille studio-time uke 18', priority: 'medium', listType: 'later' },
+    ]);
+
+    await db.insert(ideas).values([
+      { userId: goberg.id, tag: 'Lyddesign', content: 'Teste Atmos-objektspor for stemme i Nordvind-prosjektet' },
+      { userId: goberg.id, tag: 'Familie', content: 'Telttur i Nordmarka før sommerferien' },
+    ]);
+
+    app.log.info(`Seed: Ferdig! Goberg ID: ${goberg.id}`);
+  }
 }
 
 const port = Number(process.env.PORT ?? 3001);
