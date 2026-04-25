@@ -7,6 +7,7 @@ export default defineConfig({
   dbCredentials: {
     url: process.env.DATABASE_URL ?? 'postgresql://hallakompis:hallakompis@localhost:5432/hallakompis',
   },
+  schemaFilter: ['public'],
   verbose: true,
   strict: true,
 });

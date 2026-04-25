@@ -12,9 +12,11 @@
   "scripts": {
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
+	"db:migrate": "tsx src/migrate.ts",
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx src/seed.ts",
     "typecheck": "tsc --noEmit"
+	
   },
   "dependencies": {
     "dotenv": "^16.4.5",
