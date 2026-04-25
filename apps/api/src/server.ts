@@ -70,7 +70,19 @@ await app.register(layoutRoutes, { prefix: '/me/layout' });
   }
 
   app.log.info(`Kjører migrasjoner fra ${migrationsFolder}`);
-  await migrate(mdb, { migrationsFolder });
+  try {
+    await migrate(mdb, { migrationsFolder });
+    app.log.info('migrate() returnerte uten feil');
+  } catch (e) {
+    app.log.error({ err: e }, 'migrate() kastet feil');
+    throw e;
+  }
+
+  const result = await mdb.execute(
+    sql`SELECT table_name FROM information_schema.tables WHERE table_schema='public' ORDER BY table_name`
+  );
+  app.log.info(`Tabeller i public-schema: ${JSON.stringify(result.map((r: any) => r.table_name))}`);
+
   await migrationClient.end();
   app.log.info('Migrasjoner ferdig');
 }
