@@ -2,7 +2,6 @@ import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import cookie from '@fastify/cookie';
 import helmet from '@fastify/helmet';
-
 import { authRoutes } from './routes/auth.js';
 import { meRoutes } from './routes/me.js';
 import { tasksRoutes } from './routes/tasks.js';
@@ -29,10 +28,8 @@ await app.register(cors, {
 await app.register(cookie, { secret: process.env.SESSION_SECRET ?? 'dev-secret-change-me' });
 await app.register(authPlugin);
 
-// Health check
 app.get('/health', async () => ({ status: 'ok', service: 'hallakompis-api', time: new Date().toISOString() }));
 
-// Routes
 await app.register(authRoutes, { prefix: '/auth' });
 await app.register(meRoutes, { prefix: '/me' });
 await app.register(tasksRoutes, { prefix: '/tasks' });
@@ -43,23 +40,33 @@ await app.register(layoutRoutes, { prefix: '/me/layout' });
 {
   const { drizzle } = await import('drizzle-orm/postgres-js');
   const { migrate } = await import('drizzle-orm/postgres-js/migrator');
+  const { sql } = await import('drizzle-orm');
   const postgresMod = await import('postgres');
   const { resolve, dirname } = await import('node:path');
   const { fileURLToPath } = await import('node:url');
 
   const __dirname = dirname(fileURLToPath(import.meta.url));
-  // I runtime ligger migrasjonene på /app/packages/db/drizzle
   const migrationsFolder = resolve(__dirname, '../../../packages/db/drizzle');
 
-  app.log.info(`Kjører migrasjoner fra ${migrationsFolder}`);
   const migrationClient = postgresMod.default(
-  process.env.MIGRATION_DATABASE_URL ?? process.env.DATABASE_URL!,
-  { max: 1 }
-);
-  await migrate(drizzle(migrationClient), { migrationsFolder });
+    process.env.MIGRATION_DATABASE_URL ?? process.env.DATABASE_URL!,
+    { max: 1 }
+  );
+  const mdb = drizzle(migrationClient);
+
+  if (process.env.MIGRATION_RESET === 'true') {
+    app.log.warn('MIGRATION_RESET=true — dropper public og drizzle-skjemaet');
+    await mdb.execute(sql`DROP SCHEMA IF EXISTS public CASCADE`);
+    await mdb.execute(sql`DROP SCHEMA IF EXISTS drizzle CASCADE`);
+    await mdb.execute(sql`CREATE SCHEMA public`);
+  }
+
+  app.log.info(`Kjører migrasjoner fra ${migrationsFolder}`);
+  await migrate(mdb, { migrationsFolder });
   await migrationClient.end();
   app.log.info('Migrasjoner ferdig');
 }
+
 const port = Number(process.env.PORT ?? 3001);
 const host = process.env.HOST ?? '0.0.0.0';
 
