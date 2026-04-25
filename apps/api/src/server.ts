@@ -107,7 +107,14 @@ if (process.env.MIGRATE_MEMBERS === 'true') {
 
   // Slett Olivia
   await db.delete(users).where(eq(users.name, 'Olivia'));
-
+// Sett kaller_meg = 'Lars' i uiPreference
+  const { sql } = await import('drizzle-orm');
+  await db.execute(sql`
+    UPDATE users
+    SET ui_preference = jsonb_set(ui_preference, '{kaller_meg}', '"Lars"', true)
+    WHERE name = 'Lars'
+  `);
+  app.log.info('MIGRATE_MEMBERS: kaller_meg satt til Lars');
   app.log.info('MIGRATE_MEMBERS: ferdig');
 }
 
