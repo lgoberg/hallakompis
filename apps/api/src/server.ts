@@ -30,6 +30,14 @@ await app.register(authPlugin);
 
 app.get('/health', async () => ({ status: 'ok', service: 'hallakompis-api', time: new Date().toISOString() }));
 
+app.get('/_debug/db', async () => {
+  const { db } = await import('@hallakompis/db');
+  const { sql: rawSql } = await import('drizzle-orm');
+  const info = await db.execute(rawSql`SELECT current_database() as db, current_user as usr, current_schema as sch`);
+  const tables = await db.execute(rawSql`SELECT table_name FROM information_schema.tables WHERE table_schema='public' ORDER BY table_name`);
+  return { info, tables: tables.map((r: any) => r.table_name) };
+});
+
 await app.register(authRoutes, { prefix: '/auth' });
 await app.register(meRoutes, { prefix: '/me' });
 await app.register(tasksRoutes, { prefix: '/tasks' });
