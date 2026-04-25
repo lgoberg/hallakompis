@@ -117,6 +117,13 @@ if (process.env.MIGRATE_MEMBERS === 'true') {
   app.log.info('MIGRATE_MEMBERS: kaller_meg satt til Lars');
   app.log.info('MIGRATE_MEMBERS: ferdig');
 }
+// ─── Engangs: kjør memory-jobb manuelt ───
+if (process.env.RUN_MEMORY_JOB === 'true') {
+  const { runMemoryJobNow } = await import('./memory/index.js');
+  app.log.info('RUN_MEMORY_JOB: starter');
+  await runMemoryJobNow(app.log);
+  app.log.info('RUN_MEMORY_JOB: ferdig');
+}
 
 if (process.env.SEED_ON_STARTUP === 'true') {
   const { db, households, users, shoppingItems, tasks, ideas } = await import('@hallakompis/db');
@@ -176,7 +183,9 @@ if (process.env.SEED_ON_STARTUP === 'true') {
 const port = Number(process.env.PORT ?? 3001);
 const host = process.env.HOST ?? '0.0.0.0';
 
-try {
+try {// Start nattlig memory-cron
+  const { startMemoryCron } = await import('./memory/index.js');
+  startMemoryCron(app.log);
   await app.listen({ port, host });
   app.log.info(`Kompis API er klar på http://${host}:${port}`);
 } catch (err) {
