@@ -91,6 +91,17 @@ await app.register(layoutRoutes, { prefix: '/me/layout' });
   );
   app.log.info(`Tabeller i public-schema: ${JSON.stringify(result.map((r: any) => r.table_name))}`);
 
+  // Gi vanlig API-user tilgang til public-schemaet
+  if (process.env.APP_DB_USER) {
+    app.log.info(`Gir ${process.env.APP_DB_USER} tilgang til public`);
+    const u = sql.identifier(process.env.APP_DB_USER);
+    await mdb.execute(sql`GRANT USAGE ON SCHEMA public TO ${u}`);
+    await mdb.execute(sql`GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO ${u}`);
+    await mdb.execute(sql`GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO ${u}`);
+    await mdb.execute(sql`ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO ${u}`);
+    await mdb.execute(sql`ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO ${u}`);
+  }
+
   await migrationClient.end();
   app.log.info('Migrasjoner ferdig');
 }
