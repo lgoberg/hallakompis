@@ -30,14 +30,6 @@ await app.register(authPlugin);
 
 app.get('/health', async () => ({ status: 'ok', service: 'hallakompis-api', time: new Date().toISOString() }));
 
-app.get('/_debug/db', async () => {
-  const { db } = await import('@hallakompis/db');
-  const { sql: rawSql } = await import('drizzle-orm');
-  const info = await db.execute(rawSql`SELECT current_database() as db, current_user as usr, current_schema as sch`);
-  const tables = await db.execute(rawSql`SELECT table_name FROM information_schema.tables WHERE table_schema='public' ORDER BY table_name`);
-  return { info, tables: tables.map((r: any) => r.table_name) };
-});
-
 await app.register(authRoutes, { prefix: '/auth' });
 await app.register(meRoutes, { prefix: '/me' });
 await app.register(tasksRoutes, { prefix: '/tasks' });
@@ -45,7 +37,6 @@ await app.register(shoppingRoutes, { prefix: '/family/shopping' });
 await app.register(chatRoutes, { prefix: '/chat' });
 await app.register(layoutRoutes, { prefix: '/me/layout' });
 
-// ─── Migrasjoner ───
 {
   const { drizzle } = await import('drizzle-orm/postgres-js');
   const { migrate } = await import('drizzle-orm/postgres-js/migrator');
@@ -53,7 +44,6 @@ await app.register(layoutRoutes, { prefix: '/me/layout' });
   const postgresMod = await import('postgres');
   const { resolve, dirname } = await import('node:path');
   const { fileURLToPath } = await import('node:url');
-  const fs = await import('node:fs');
 
   const __dirname = dirname(fileURLToPath(import.meta.url));
   const migrationsFolder = resolve(__dirname, '../../../packages/db/drizzle');
@@ -71,25 +61,10 @@ await app.register(layoutRoutes, { prefix: '/me/layout' });
     await mdb.execute(sql`CREATE SCHEMA public`);
   }
 
-  try {
-    const files = fs.readdirSync(migrationsFolder);
-    app.log.info(`Innhold i migrations-mappa: ${JSON.stringify(files)}`);
-  } catch (e) {
-    app.log.error(`Kan ikke lese migrations-mappa: ${(e as Error).message}`);
-  }
-
   app.log.info(`Kjører migrasjoner fra ${migrationsFolder}`);
-  try {
-    await migrate(mdb, { migrationsFolder });
-    app.log.info('migrate() returnerte uten feil');
-  } catch (e) {
-    app.log.error({ err: e }, 'migrate() kastet feil');
-    throw e;
-  }
+  await migrate(mdb, { migrationsFolder });
 
-  // Gi vanlig API-user tilgang til public-schemaet
   if (process.env.APP_DB_USER) {
-    app.log.info(`Gir ${process.env.APP_DB_USER} tilgang til public`);
     const u = sql.identifier(process.env.APP_DB_USER);
     await mdb.execute(sql`GRANT USAGE ON SCHEMA public TO ${u}`);
     await mdb.execute(sql`GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO ${u}`);
@@ -102,10 +77,8 @@ await app.register(layoutRoutes, { prefix: '/me/layout' });
   app.log.info('Migrasjoner ferdig');
 }
 
-// ─── Seed (kun hvis SEED_ON_STARTUP=true og DB er tom) ───
 if (process.env.SEED_ON_STARTUP === 'true') {
-  const { db } = await import('@hallakompis/db');
-  const { households, users, shoppingItems, tasks, ideas } = await import('@hallakompis/db');
+  const { db, households, users, shoppingItems, tasks, ideas } = await import('@hallakompis/db');
 
   const existing = await db.select().from(households).limit(1);
   if (existing.length > 0) {
@@ -122,20 +95,11 @@ if (process.env.SEED_ON_STARTUP === 'true') {
       displayName: 'Goberg',
       role: 'adult',
       avatarColor: '#B8763D',
-      uiPreference: {
-        kaller_meg: 'Goberg',
-        tone: 'nøytral',
-        språk: 'nb-NO',
-        bekreft_før_handling: true,
-      },
+      uiPreference: { kaller_meg: 'Goberg', tone: 'nøytral', språk: 'nb-NO', bekreft_før_handling: true },
     }).returning();
 
     const [ida] = await db.insert(users).values({
-      householdId: household.id,
-      name: 'Ida',
-      displayName: 'Ida',
-      role: 'adult',
-      avatarColor: '#7A8D7A',
+      householdId: household.id, name: 'Ida', displayName: 'Ida', role: 'adult', avatarColor: '#7A8D7A',
     }).returning();
 
     await db.insert(users).values([
