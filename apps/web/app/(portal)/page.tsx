@@ -1,12 +1,16 @@
 import { redirect } from 'next/navigation';
-import { cookies, headers } from 'next/headers';
+import { cookies } from 'next/headers';
 import PortalClient from './client';
 import type { Me } from '@/lib/api';
 
+const API_URL = process.env.API_URL ?? 'http://localhost:3001';
+
 async function fetchMe(cookieHeader: string): Promise<Me | null> {
-  const base = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
   try {
-    const res = await fetch(`${base}/me`, { headers: { cookie: cookieHeader }, cache: 'no-store' });
+    const res = await fetch(`${API_URL}/me`, {
+      headers: { cookie: cookieHeader },
+      cache: 'no-store',
+    });
     if (!res.ok) return null;
     return res.json();
   } catch {

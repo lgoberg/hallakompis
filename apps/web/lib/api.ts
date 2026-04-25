@@ -1,26 +1,16 @@
-/**
- * Tynn wrapper rundt fetch som snakker med Kompis-API-en.
- * Sender cookies automatisk, parser JSON, kaster ved feil.
- */
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+// All API-kall fra klienten går til /api/* som er proxet av Next.js til Fastify-API.
+// Det gjør cookies same-origin og fjerner CORS-problemer.
+const API_BASE = '/api';
 
-interface ApiError extends Error {
-  status: number;
-  code?: string;
-}
-
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+async function request<T = unknown>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     ...init,
     credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      ...init?.headers,
-    },
+    headers: { 'Content-Type': 'application/json', ...init?.headers },
   });
 
   if (!res.ok) {
-    const err = new Error(`API ${res.status}: ${path}`) as ApiError;
+    const err: Error & { status?: number } = new Error(`API ${res.status}: ${path}`);
     err.status = res.status;
     try {
       const body = await res.json();
@@ -30,62 +20,30 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   if (res.status === 204) return undefined as T;
-  return res.json();
+  return res.json() as Promise<T>;
 }
 
 export const api = {
-  get: <T>(path: string) => request<T>(path),
-  post: <T>(path: string, body?: unknown) =>
-    request<T>(path, { method: 'POST', body: body ? JSON.stringify(body) : undefined }),
-  patch: <T>(path: string, body: unknown) =>
-    request<T>(path, { method: 'PATCH', body: JSON.stringify(body) }),
-  put: <T>(path: string, body: unknown) =>
-    request<T>(path, { method: 'PUT', body: JSON.stringify(body) }),
-  del: <T>(path: string) => request<T>(path, { method: 'DELETE' }),
+  get: <T = unknown>(p: string) => request<T>(p),
+  post: <T = unknown>(p: string, body?: unknown) =>
+    request<T>(p, { method: 'POST', body: body ? JSON.stringify(body) : undefined }),
+  patch: <T = unknown>(p: string, body: unknown) =>
+    request<T>(p, { method: 'PATCH', body: JSON.stringify(body) }),
+  put: <T = unknown>(p: string, body: unknown) =>
+    request<T>(p, { method: 'PUT', body: JSON.stringify(body) }),
+  del: <T = unknown>(p: string) => request<T>(p, { method: 'DELETE' }),
 };
 
-// ─── Typer som speiler backend-responser ───
-export interface Member {
+export type Member = {
   id: string;
   name: string;
   displayName: string | null;
   role: 'adult' | 'child' | 'wall_display';
   avatarColor: string | null;
   hasPin: boolean;
-}
+};
 
-export interface Household {
+export type Household = {
   household: { id: string; name: string };
   members: Member[];
-}
-
-export interface Me {
-  id: string;
-  name: string;
-  displayName: string | null;
-  role: 'adult' | 'child' | 'wall_display';
-  avatarColor: string | null;
-  uiPreference: Record<string, unknown>;
-}
-
-export interface Task {
-  id: string;
-  content: string;
-  priority: 'high' | 'medium' | 'low';
-  listType: 'today' | 'later' | 'someday';
-  doneAt: string | null;
-  dueAt: string | null;
-}
-
-export interface ShoppingItem {
-  id: string;
-  content: string;
-  category: string | null;
-  checked: boolean;
-  addedBy: string | null;
-}
-
-export interface ChatResponse {
-  reply: string;
-  toolCalls: Array<{ name: string; input: unknown; result: unknown }>;
-}
+};
