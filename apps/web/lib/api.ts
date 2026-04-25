@@ -1,5 +1,3 @@
-// All API-kall fra klienten går til /api/* som er proxet av Next.js til Fastify-API.
-// Det gjør cookies same-origin og fjerner CORS-problemer.
 const API_BASE = '/api';
 
 async function request<T = unknown>(path: string, init?: RequestInit): Promise<T> {
@@ -46,4 +44,38 @@ export type Member = {
 export type Household = {
   household: { id: string; name: string };
   members: Member[];
+};
+
+export type Me = {
+  id: string;
+  householdId: string;
+  name: string;
+  displayName: string | null;
+  role: 'adult' | 'child' | 'wall_display';
+  avatarColor?: string | null;
+};
+
+export type Task = {
+  id: string;
+  userId: string;
+  content: string;
+  priority: 'high' | 'medium' | 'low' | null;
+  dueAt: string | null;
+  doneAt: string | null;
+  listType: 'today' | 'later' | 'someday';
+};
+
+export type ShoppingItem = {
+  id: string;
+  householdId: string;
+  content: string;
+  category: string | null;
+  checked: boolean;
+  addedBy: string | null;
+  createdAt: string;
+};
+
+export type ChatResponse = {
+  reply: string;
+  toolCalls: { name: string; input: unknown; result?: unknown }[];
 };
