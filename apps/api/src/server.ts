@@ -1,11 +1,3 @@
-if (process.env.NODE_ENV !== 'production') {
-  const dotenv = await import('dotenv');
-  const path = await import('node:path');
-  const url = await import('node:url');
-  const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
-  dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
-}
-
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import cookie from '@fastify/cookie';
