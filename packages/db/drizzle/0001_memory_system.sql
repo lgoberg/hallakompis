@@ -1,3 +1,4 @@
+CREATE EXTENSION IF NOT EXISTS vector;--> statement-breakpoint
 CREATE TYPE "public"."memory_event_type" AS ENUM('decision', 'outcome', 'state', 'event');--> statement-breakpoint
 CREATE TABLE "memory_events" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
