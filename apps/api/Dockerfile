@@ -18,6 +18,8 @@ COPY --from=deps /repo/apps/api/node_modules ./apps/api/node_modules
 COPY --from=deps /repo/packages/db/node_modules ./packages/db/node_modules
 COPY --from=deps /repo/packages/shared/node_modules ./packages/shared/node_modules
 COPY . .
+RUN pnpm --filter @hallakompis/shared build
+RUN pnpm --filter @hallakompis/db build
 RUN pnpm --filter @hallakompis/api build
 
 # ─── Runtime ───
