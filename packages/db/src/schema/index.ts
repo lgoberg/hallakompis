@@ -322,3 +322,6 @@ export const memoryEventsRelations = relations(memoryEvents, ({ one }) => ({
 export const memoryReflectionsRelations = relations(memoryReflections, ({ one }) => ({
   user: one(users, { fields: [memoryReflections.userId], references: [users.id] }),
 }));
+
+// Voice (fase 1+: telemetri for tale-økter)
+export * from './voice';
