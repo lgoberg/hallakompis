@@ -8,7 +8,9 @@ import { registerSttRoute } from './stt.js';
 import { registerTelemetryRoute } from './telemetry.js';
 
 export async function voiceRoutes(app: FastifyInstance): Promise<void> {
+  app.log.info("[voice] registerer ruter");
   await registerTtsRoute(app);
   await registerSttRoute(app);
   await registerTelemetryRoute(app);
 }
+
