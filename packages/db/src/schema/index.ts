@@ -323,5 +323,56 @@ export const memoryReflectionsRelations = relations(memoryReflections, ({ one })
   user: one(users, { fields: [memoryReflections.userId], references: [users.id] }),
 }));
 
-// Voice (fase 1+: telemetri for tale-økter)
-export * from './voice';
+
+// ═════════════════════════════════════════════════════════════
+//  TALE / VOICE (fase 1+)
+// ═════════════════════════════════════════════════════════════
+
+export const voiceInputModeEnum = pgEnum('voice_input_mode', [
+  'web-speech',
+  'media-recorder',
+  'whisper-streaming',
+  'realtime',
+]);
+
+export const voiceOutputModeEnum = pgEnum('voice_output_mode', [
+  'browser-tts',
+  'elevenlabs',
+  'realtime',
+]);
+
+export const voiceSessionResultEnum = pgEnum('voice_session_result', [
+  'success',
+  'cancelled',
+  'no-speech',
+  'stt-error',
+  'llm-error',
+  'tts-error',
+  'permission-denied',
+]);
+
+export const voiceSessions = pgTable('voice_sessions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  conversationId: uuid('conversation_id').references(() => conversations.id, { onDelete: 'set null' }),
+  inputMode: voiceInputModeEnum('input_mode').notNull(),
+  outputMode: voiceOutputModeEnum('output_mode').notNull(),
+  result: voiceSessionResultEnum('result').notNull(),
+  errorReason: text('error_reason'),
+  startedAt: timestamp('started_at', { withTimezone: true }).defaultNow().notNull(),
+  endedAt: timestamp('ended_at', { withTimezone: true }),
+  sttLatencyMs: integer('stt_latency_ms'),
+  llmLatencyMs: integer('llm_latency_ms'),
+  ttsLatencyMs: integer('tts_latency_ms'),
+  totalLatencyMs: integer('total_latency_ms'),
+  transcript: text('transcript'),
+  responseText: text('response_text'),
+}, (t) => [
+  index('idx_voice_sessions_user_time').on(t.userId, t.startedAt),
+  index('idx_voice_sessions_result').on(t.result),
+]);
+
+export const voiceSessionsRelations = relations(voiceSessions, ({ one }) => ({
+  user: one(users, { fields: [voiceSessions.userId], references: [users.id] }),
+  conversation: one(conversations, { fields: [voiceSessions.conversationId], references: [conversations.id] }),
+}));
