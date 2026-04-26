@@ -36,6 +36,10 @@ await app.register(tasksRoutes, { prefix: '/tasks' });
 await app.register(shoppingRoutes, { prefix: '/family/shopping' });
 await app.register(chatRoutes, { prefix: '/chat' });
 await app.register(layoutRoutes, { prefix: '/me/layout' });
+await app.register(async (instance) => {
+  const { registerVoiceRoutes } = await import('./voice/index.js');
+  await registerVoiceRoutes(instance);
+}, { prefix: '/voice' });
 
 // ─── Migrasjoner ved oppstart ───
 {
