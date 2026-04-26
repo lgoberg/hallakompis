@@ -108,6 +108,7 @@ export const tasks = pgTable('tasks', {
   listType: taskListEnum('list_type').default('today').notNull(),
   dueAt: timestamp('due_at', { withTimezone: true }),
   doneAt: timestamp('done_at', { withTimezone: true }),
+  archivedAt: timestamp('archived_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
@@ -130,6 +131,7 @@ export const shoppingItems = pgTable('shopping_items', {
   content: text('content').notNull(),
   category: text('category'),
   checked: boolean('checked').default(false).notNull(),
+  archivedAt: timestamp('archived_at', { withTimezone: true }),
   addedBy: uuid('added_by').references(() => users.id, { onDelete: 'set null' }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });

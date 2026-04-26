@@ -107,6 +107,17 @@ export default function PortalClient({ me }: { me: Me }) {
     refreshData();
   }
 
+  async function archiveCompletedTasks(listType?: 'today' | 'later' | 'someday') {
+    const path = listType ? `/tasks/archive-completed?listType=${listType}` : '/tasks/archive-completed';
+    await api.post(path);
+    refreshData();
+  }
+
+  async function archiveCompletedShopping() {
+    await api.post('/family/shopping/archive-completed');
+    refreshData();
+  }
+
   const todayTasks = tasks.filter((t) => t.listType === 'today');
   const laterTasks = tasks.filter((t) => t.listType === 'later');
 
@@ -125,6 +136,8 @@ export default function PortalClient({ me }: { me: Me }) {
               shopping={shopping}
               onToggleTask={toggleTask}
               onLogout={logout}
+              onArchiveTasks={archiveCompletedTasks}
+              onArchiveShopping={archiveCompletedShopping}
             />
           )}
           {mobileView === 'lists' && (
@@ -133,6 +146,8 @@ export default function PortalClient({ me }: { me: Me }) {
               shopping={shopping}
               onToggleTask={toggleTask}
               onToggleShop={toggleShop}
+              onArchiveTasks={archiveCompletedTasks}
+              onArchiveShopping={archiveCompletedShopping}
             />
           )}
           {mobileView === 'family' && <MobileFamily />}
@@ -202,7 +217,7 @@ export default function PortalClient({ me }: { me: Me }) {
         </header>
 
         <div className="grid grid-cols-2 gap-4">
-          <Card title="Oppgaver i dag" count={todayTasks.length}>
+          <Card title="Oppgaver i dag" count={todayTasks.filter((t) => !t.doneAt).length}>
             {todayTasks.length === 0 && <EmptyHint text="Ingen oppgaver — be Kompis legge til noe!" />}
             {todayTasks.map((t) => (
               <div key={t.id} className="flex items-start gap-2.5 py-1.5 text-sm border-b last:border-b-0">
@@ -211,6 +226,7 @@ export default function PortalClient({ me }: { me: Me }) {
                 {t.priority === 'high' && <span className="text-[10px] text-coral ml-auto">!</span>}
               </div>
             ))}
+            <ArchiveLink count={todayTasks.filter((t) => t.doneAt).length} onClick={() => archiveCompletedTasks('today')} />
           </Card>
 
           <Card title="Handleliste" count={shopping.filter((s) => !s.checked).length} subtitle="delt med husstanden">
@@ -222,13 +238,18 @@ export default function PortalClient({ me }: { me: Me }) {
                 {s.category && <span className="text-[10px] text-muted ml-auto">{s.category}</span>}
               </div>
             ))}
+            <ArchiveLink count={shopping.filter((s) => s.checked).length} onClick={archiveCompletedShopping} />
           </Card>
 
-          <Card title="Senere i uka" count={laterTasks.length}>
+          <Card title="Senere i uka" count={laterTasks.filter((t) => !t.doneAt).length}>
             {laterTasks.length === 0 && <EmptyHint text="Ingenting planlagt" />}
             {laterTasks.map((t) => (
-              <div key={t.id} className="py-1.5 text-sm border-b last:border-b-0">{t.content}</div>
+              <div key={t.id} className="flex items-start gap-2.5 py-1.5 text-sm border-b last:border-b-0">
+                <input type="checkbox" checked={!!t.doneAt} onChange={() => toggleTask(t)} className="mt-1" />
+                <span className={t.doneAt ? 'line-through text-muted' : ''}>{t.content}</span>
+              </div>
             ))}
+            <ArchiveLink count={laterTasks.filter((t) => t.doneAt).length} onClick={() => archiveCompletedTasks('later')} />
           </Card>
 
           <Card title="Integrasjoner" subtitle="MVP — kun interne moduler">
@@ -293,7 +314,7 @@ export default function PortalClient({ me }: { me: Me }) {
 // ─────────────────────────────────────────────────────────────────
 
 function MobileHome({
-  me, todayTasks, laterTasks, shopping, onToggleTask, onLogout,
+  me, todayTasks, laterTasks, shopping, onToggleTask, onLogout, onArchiveTasks, onArchiveShopping,
 }: {
   me: Me;
   todayTasks: Task[];
@@ -301,6 +322,8 @@ function MobileHome({
   shopping: ShoppingItem[];
   onToggleTask: (t: Task) => void;
   onLogout: () => void;
+  onArchiveTasks: (listType?: 'today' | 'later' | 'someday') => void;
+  onArchiveShopping: () => void;
 }) {
   return (
     <div className="px-5 pt-6">
@@ -324,7 +347,7 @@ function MobileHome({
       </header>
 
       <div className="space-y-4">
-        <Card title="Oppgaver i dag" count={todayTasks.length}>
+        <Card title="Oppgaver i dag" count={todayTasks.filter((t) => !t.doneAt).length}>
           {todayTasks.length === 0 && <EmptyHint text="Ingen oppgaver — be Kompis legge til noe!" />}
           {todayTasks.map((t) => (
             <div key={t.id} className="flex items-start gap-3 py-2 text-sm border-b last:border-b-0">
@@ -333,13 +356,18 @@ function MobileHome({
               {t.priority === 'high' && <span className="text-[10px] text-coral">!</span>}
             </div>
           ))}
+          <ArchiveLink count={todayTasks.filter((t) => t.doneAt).length} onClick={() => onArchiveTasks('today')} />
         </Card>
 
-        <Card title="Senere i uka" count={laterTasks.length}>
+        <Card title="Senere i uka" count={laterTasks.filter((t) => !t.doneAt).length}>
           {laterTasks.length === 0 && <EmptyHint text="Ingenting planlagt" />}
           {laterTasks.slice(0, 5).map((t) => (
-            <div key={t.id} className="py-2 text-sm border-b last:border-b-0">{t.content}</div>
+            <div key={t.id} className="flex items-start gap-3 py-2 text-sm border-b last:border-b-0">
+              <input type="checkbox" checked={!!t.doneAt} onChange={() => onToggleTask(t)} className="mt-1" />
+              <span className={t.doneAt ? 'line-through text-muted flex-1' : 'flex-1'}>{t.content}</span>
+            </div>
           ))}
+          <ArchiveLink count={laterTasks.filter((t) => t.doneAt).length} onClick={() => onArchiveTasks('later')} />
         </Card>
 
         <Card title="Handleliste" count={shopping.filter((s) => !s.checked).length} subtitle="delt med husstanden">
@@ -351,6 +379,7 @@ function MobileHome({
             </div>
           ))}
           {shopping.length > 5 && <div className="text-[11px] text-muted italic mt-2">+ {shopping.length - 5} mer i Lister</div>}
+          <ArchiveLink count={shopping.filter((s) => s.checked).length} onClick={onArchiveShopping} />
         </Card>
       </div>
     </div>
@@ -358,18 +387,20 @@ function MobileHome({
 }
 
 function MobileLists({
-  tasks, shopping, onToggleTask, onToggleShop,
+  tasks, shopping, onToggleTask, onToggleShop, onArchiveTasks, onArchiveShopping,
 }: {
   tasks: Task[];
   shopping: ShoppingItem[];
   onToggleTask: (t: Task) => void;
   onToggleShop: (s: ShoppingItem) => void;
+  onArchiveTasks: (listType?: 'today' | 'later' | 'someday') => void;
+  onArchiveShopping: () => void;
 }) {
   return (
     <div className="px-5 pt-6">
       <h1 className="font-display text-2xl font-light mb-5">Lister</h1>
       <div className="space-y-4">
-        <Card title="Alle oppgaver" count={tasks.length}>
+        <Card title="Alle oppgaver" count={tasks.filter((t) => !t.doneAt).length}>
           {tasks.length === 0 && <EmptyHint text="Ingen oppgaver" />}
           {tasks.map((t) => (
             <div key={t.id} className="flex items-start gap-3 py-2 text-sm border-b last:border-b-0">
@@ -378,6 +409,7 @@ function MobileLists({
               <span className="text-[10px] text-muted">{t.listType}</span>
             </div>
           ))}
+          <ArchiveLink count={tasks.filter((t) => t.doneAt).length} onClick={() => onArchiveTasks()} />
         </Card>
 
         <Card title="Handleliste" count={shopping.filter((s) => !s.checked).length} subtitle="delt med husstanden">
@@ -389,6 +421,7 @@ function MobileLists({
               {s.category && <span className="text-[10px] text-muted">{s.category}</span>}
             </div>
           ))}
+          <ArchiveLink count={shopping.filter((s) => s.checked).length} onClick={onArchiveShopping} />
         </Card>
       </div>
     </div>
@@ -518,6 +551,20 @@ function Card({ title, subtitle, count, children }: {
 
 function EmptyHint({ text }: { text: string }) {
   return <div className="text-sm text-muted font-display italic py-2">{text}</div>;
+}
+
+function ArchiveLink({ count, onClick }: { count: number; onClick: () => void }) {
+  if (count === 0) return null;
+  const txt = count === 1 ? 'Rydd 1 fullført' : `Rydd ${count} fullførte`;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="text-[11px] text-muted hover:text-copper italic font-display py-1 mt-2 self-start transition-colors"
+    >
+      {txt} →
+    </button>
+  );
 }
 
 // ─────────────────────────────────────────────────────────────────
