@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * Voice fase 2.5 — frontend-hook for tale-input + auto-TTS.
+ * Voice fase 2.5 — frontend-hook for tale-input + auto-TTS + telemetri.
  *
  * Modus:
  *  - Hold (pointerdown → pointerup, > 200ms): én runde tale → chat → TTS
@@ -11,6 +11,8 @@
  * TTS: POST /api/voice/tts → mp3-stream → Audio.play(). Hvis 501,
  *      faller vi tilbake til ingen avspilling (klient kan i framtid
  *      bruke speechSynthesis).
+ * Telemetri: hver fullført runde POSTes til /api/voice/sessions
+ *            (fire-and-forget, feil svelges).
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
@@ -48,6 +50,28 @@ export type VoiceState =
   | 'unsupported'
   | 'error';
 
+type VoiceResult =
+  | 'success'
+  | 'cancelled'
+  | 'no-speech'
+  | 'stt-error'
+  | 'llm-error'
+  | 'tts-error'
+  | 'permission-denied';
+
+type VoiceOutputMode = 'browser-tts' | 'elevenlabs' | 'realtime';
+
+interface RoundData {
+  startedAt: number;
+  sttDoneAt?: number;
+  llmDoneAt?: number;
+  ttsDoneAt?: number;
+  transcript?: string;
+  reply?: string;
+  outputMode: VoiceOutputMode;
+  trigger: 'hold' | 'lock';
+}
+
 export interface UseVoiceOptions {
   /** Kalles når en ferdig ytring er klar. Returner svartekst som skal leses opp, eller null/undefined. */
   onUtterance: (transcript: string) => Promise<string | null | undefined>;
@@ -83,6 +107,43 @@ export function useVoice({
   const pressedAtRef = useRef<number>(0);
   const finalTranscriptRef = useRef<string>('');
   const cancelRequestedRef = useRef<boolean>(false);
+  const roundRef = useRef<RoundData | null>(null);
+
+  // ─── Telemetri-helpers (kun ref-basert, stabile på tvers av renders) ─
+  const startRound = useCallback((trigger: 'hold' | 'lock') => {
+    roundRef.current = { startedAt: Date.now(), outputMode: 'elevenlabs', trigger };
+  }, []);
+
+  const finalizeRound = useCallback((result: VoiceResult, reason?: string) => {
+    const r = roundRef.current;
+    if (!r) return;
+    roundRef.current = null;
+    const endedAt = Date.now();
+    const payload = {
+      inputMode: 'web-speech' as const,
+      outputMode: r.outputMode,
+      result,
+      errorReason: reason,
+      startedAt: new Date(r.startedAt).toISOString(),
+      endedAt: new Date(endedAt).toISOString(),
+      sttLatencyMs: r.sttDoneAt ? r.sttDoneAt - r.startedAt : undefined,
+      llmLatencyMs: r.llmDoneAt && r.sttDoneAt ? r.llmDoneAt - r.sttDoneAt : undefined,
+      ttsLatencyMs: r.ttsDoneAt && r.llmDoneAt ? r.ttsDoneAt - r.llmDoneAt : undefined,
+      totalLatencyMs: endedAt - r.startedAt,
+      transcript: r.transcript?.slice(0, 5000),
+      responseText: r.reply?.slice(0, 10000),
+    };
+    void fetch('/api/voice/sessions', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }).catch(() => {});
+  }, []);
+
+  const discardRound = useCallback(() => {
+    roundRef.current = null;
+  }, []);
 
   // ─── Init: feature-detect + opprett recognition én gang ────────────
   useEffect(() => {
@@ -112,11 +173,15 @@ export function useVoice({
     };
 
     rec.onerror = (e: SRErrorEvent) => {
-      // 'no-speech', 'not-allowed', 'aborted' osv.
       if (e.error === 'aborted') return;
       setErrorReason(e.error);
       setState('error');
       modeRef.current = 'idle';
+      const result: VoiceResult =
+        e.error === 'not-allowed' ? 'permission-denied' :
+        e.error === 'no-speech' ? 'no-speech' :
+        'stt-error';
+      finalizeRound(result, e.error);
     };
 
     rec.onend = () => {
@@ -129,7 +194,7 @@ export function useVoice({
       try { rec.abort(); } catch {}
       recognitionRef.current = null;
     };
-  }, [language]);
+  }, [language, finalizeRound]);
 
   // ─── Stopp lyd ───────────────────────────────────────────────────
   const stopAudio = useCallback(() => {
@@ -149,7 +214,6 @@ export function useVoice({
       body: JSON.stringify({ text }),
     });
     if (!res.ok) {
-      // 501 = ikke konfigurert → tagger feilen så caller kan ignorere
       const err = new Error(`tts ${res.status}`);
       (err as Error & { code?: string }).code = TTS_FALLBACK_MARKER;
       throw err;
@@ -168,12 +232,17 @@ export function useVoice({
 
   // ─── Kjør én runde: send transcript, spill svar, evt. restart ─────
   const runRound = useCallback(async (transcript: string) => {
+    const round = roundRef.current;
     if (!transcript.trim()) {
-      // tom ytring i hold-modus → bare gå til idle
       modeRef.current = 'idle';
       setState('idle');
       setInterim('');
+      finalizeRound('no-speech');
       return;
+    }
+    if (round) {
+      round.sttDoneAt = Date.now();
+      round.transcript = transcript;
     }
     cancelRequestedRef.current = false;
     setState('processing');
@@ -181,24 +250,34 @@ export function useVoice({
     let reply: string | null | undefined;
     try {
       reply = await onUtterance(transcript);
+      if (round) round.llmDoneAt = Date.now();
     } catch (err) {
-      setErrorReason(err instanceof Error ? err.message : 'chat-error');
+      const msg = err instanceof Error ? err.message : 'chat-error';
+      setErrorReason(msg);
       setState('error');
       modeRef.current = 'idle';
+      finalizeRound('llm-error', msg);
       return;
     }
     if (cancelRequestedRef.current) {
       modeRef.current = 'idle';
       setState('idle');
+      finalizeRound('cancelled');
       return;
     }
+    if (round) round.reply = reply ?? undefined;
+    let ttsErrorReason: string | undefined;
     if (reply) {
       setState('speaking');
       try {
         await speak(reply);
+        if (round) round.ttsDoneAt = Date.now();
       } catch (err) {
-        if ((err as { code?: string }).code !== TTS_FALLBACK_MARKER) {
-          // ekte feil — logg, men ikke blokker neste runde
+        const e = err as Error & { code?: string };
+        if (e.code === TTS_FALLBACK_MARKER) {
+          ttsErrorReason = 'tts-not-configured';
+        } else {
+          ttsErrorReason = e.message ?? 'tts-error';
           console.warn('[voice] TTS feilet:', err);
         }
       }
@@ -206,37 +285,41 @@ export function useVoice({
     if (cancelRequestedRef.current) {
       modeRef.current = 'idle';
       setState('idle');
+      finalizeRound('cancelled');
       return;
     }
+    if (ttsErrorReason) {
+      finalizeRound('tts-error', ttsErrorReason);
+    } else {
+      finalizeRound('success');
+    }
     if (modeRef.current === 'lock') {
-      // restart for neste ytring
       finalTranscriptRef.current = '';
+      startRound('lock');
       try {
         recognitionRef.current?.start();
         setState('locked');
       } catch {
-        // start kastet hvis allerede startet — anta locked
         setState('locked');
       }
     } else {
       setState('idle');
     }
-  }, [onUtterance, speak]);
+  }, [onUtterance, speak, finalizeRound, startRound]);
 
   // ─── Press start (mousedown / touchstart) ─────────────────────────
   const pressStart = useCallback(() => {
     if (state === 'unsupported') return;
     const rec = recognitionRef.current;
     if (!rec) return;
-    // hvis vi snakker, avbryt avspilling og avbryt aktiv runde
     if (state === 'speaking') {
       cancelRequestedRef.current = true;
       stopAudio();
     }
     if (modeRef.current === 'lock') {
-      // forlat lock først
       try { rec.abort(); } catch {}
       modeRef.current = 'idle';
+      finalizeRound('cancelled');
     }
     modeRef.current = 'hold';
     pressedAtRef.current = Date.now();
@@ -244,11 +327,11 @@ export function useVoice({
     setInterim('');
     setErrorReason(undefined);
     setState('holding');
+    startRound('hold');
     try { rec.start(); } catch {
-      // hvis allerede startet, abort + retry
       try { rec.abort(); rec.start(); } catch {}
     }
-  }, [state, stopAudio]);
+  }, [state, stopAudio, startRound, finalizeRound]);
 
   // ─── Press end (mouseup / touchend / leave) ──────────────────────
   const pressEnd = useCallback(() => {
@@ -257,21 +340,21 @@ export function useVoice({
     const rec = recognitionRef.current;
     modeRef.current = 'idle';
     if (duration < holdThresholdMs) {
-      // for kort — antas å være start på dobbeltklikk
+      // for kort — antas å være start på dobbeltklikk; ikke logg
       try { rec?.abort(); } catch {}
+      discardRound();
       setState('idle');
       setInterim('');
       finalTranscriptRef.current = '';
       return;
     }
     try { rec?.stop(); } catch {}
-    // gi recognition et øyeblikk til å levere final result
     setState('processing');
     setTimeout(() => {
       const text = (finalTranscriptRef.current || interim).trim();
       void runRound(text);
     }, 120);
-  }, [holdThresholdMs, runRound, interim]);
+  }, [holdThresholdMs, runRound, interim, discardRound]);
 
   // ─── Toggle (dblclick) ───────────────────────────────────────────
   const toggle = useCallback(() => {
@@ -279,16 +362,15 @@ export function useVoice({
     const rec = recognitionRef.current;
     if (!rec) return;
     if (modeRef.current === 'lock') {
-      // av
       cancelRequestedRef.current = true;
       modeRef.current = 'idle';
       try { rec.abort(); } catch {}
       stopAudio();
+      finalizeRound('cancelled');
       setState('idle');
       setInterim('');
       return;
     }
-    // på
     cancelRequestedRef.current = false;
     stopAudio();
     modeRef.current = 'lock';
@@ -296,21 +378,24 @@ export function useVoice({
     setInterim('');
     setErrorReason(undefined);
     setState('locked');
-    // i lock binder vi onend til å trigge runde
     rec.onend = () => {
       if (modeRef.current !== 'lock') return;
       const text = (finalTranscriptRef.current || interim).trim();
       if (!text) {
-        // ingen tale — restart
+        // ingen tale — logg som no-speech og restart
+        finalizeRound('no-speech');
+        finalTranscriptRef.current = '';
+        startRound('lock');
         try { rec.start(); } catch {}
         return;
       }
       void runRound(text);
     };
+    startRound('lock');
     try { rec.start(); } catch {
       try { rec.abort(); rec.start(); } catch {}
     }
-  }, [state, stopAudio, runRound, interim]);
+  }, [state, stopAudio, runRound, interim, startRound, finalizeRound]);
 
   // ─── Cancel (esc / blur) ─────────────────────────────────────────
   const cancel = useCallback(() => {
@@ -318,9 +403,10 @@ export function useVoice({
     modeRef.current = 'idle';
     try { recognitionRef.current?.abort(); } catch {}
     stopAudio();
+    finalizeRound('cancelled');
     setState('idle');
     setInterim('');
-  }, [stopAudio]);
+  }, [stopAudio, finalizeRound]);
 
   // ─── Cleanup på unmount ──────────────────────────────────────────
   useEffect(() => {
