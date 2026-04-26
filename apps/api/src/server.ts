@@ -8,6 +8,7 @@ import { tasksRoutes } from './routes/tasks.js';
 import { shoppingRoutes } from './routes/shopping.js';
 import { chatRoutes } from './routes/chat.js';
 import { layoutRoutes } from './routes/layout.js';
+import { voiceRoutes } from './voice/index.js';
 import { authPlugin } from './lib/auth.js';
 
 const app = Fastify({
@@ -36,10 +37,7 @@ await app.register(tasksRoutes, { prefix: '/tasks' });
 await app.register(shoppingRoutes, { prefix: '/family/shopping' });
 await app.register(chatRoutes, { prefix: '/chat' });
 await app.register(layoutRoutes, { prefix: '/me/layout' });
-await app.register(async (instance) => {
-  const { registerVoiceRoutes } = await import('./voice/index.js');
-  await registerVoiceRoutes(instance);
-}, { prefix: '/voice' });
+await app.register(voiceRoutes, { prefix: '/voice' });
 
 // ─── Migrasjoner ved oppstart ───
 {
@@ -111,7 +109,8 @@ if (process.env.MIGRATE_MEMBERS === 'true') {
 
   // Slett Olivia
   await db.delete(users).where(eq(users.name, 'Olivia'));
-// Sett kaller_meg = 'Lars' i uiPreference
+
+  // Sett kaller_meg = 'Lars' i uiPreference
   const { sql } = await import('drizzle-orm');
   await db.execute(sql`
     UPDATE users
@@ -121,6 +120,7 @@ if (process.env.MIGRATE_MEMBERS === 'true') {
   app.log.info('MIGRATE_MEMBERS: kaller_meg satt til Lars');
   app.log.info('MIGRATE_MEMBERS: ferdig');
 }
+
 // ─── Engangs: kjør memory-jobb manuelt ───
 if (process.env.RUN_MEMORY_JOB === 'true') {
   const { runMemoryJobNow } = await import('./memory/index.js');
@@ -187,9 +187,11 @@ if (process.env.SEED_ON_STARTUP === 'true') {
 const port = Number(process.env.PORT ?? 3001);
 const host = process.env.HOST ?? '0.0.0.0';
 
-try {// Start nattlig memory-cron
+try {
+  // Start nattlig memory-cron
   const { startMemoryCron } = await import('./memory/index.js');
   startMemoryCron(app.log);
+
   await app.listen({ port, host });
   app.log.info(`Kompis API er klar på http://${host}:${port}`);
 } catch (err) {
