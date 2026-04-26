@@ -15,7 +15,7 @@ const ttsRequestSchema = z.object({
 });
 
 export async function registerTtsRoute(app: FastifyInstance): Promise<void> {
-  app.post('/voice/tts', async (request, reply) => {
+  app.post('/tts', async (request, reply) => {
     const parsed = ttsRequestSchema.safeParse(request.body);
     if (!parsed.success) {
       return reply.status(400).send({ error: 'invalid request', details: parsed.error.issues });

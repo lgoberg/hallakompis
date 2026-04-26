@@ -7,7 +7,7 @@
 import type { FastifyInstance } from 'fastify';
 
 export async function registerSttRoute(app: FastifyInstance): Promise<void> {
-  app.post('/voice/stt', async (_request, reply) => {
+  app.post('/stt', async (_request, reply) => {
     return reply.status(501).send({
       error: 'not-implemented',
       message: 'STT-proxy aktiveres i fase 3 (Whisper). Bruk Web Speech API.',

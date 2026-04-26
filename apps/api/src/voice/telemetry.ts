@@ -31,7 +31,7 @@ const logRequestSchema = z.object({
 });
 
 export async function registerTelemetryRoute(app: FastifyInstance): Promise<void> {
-  app.post('/voice/sessions', async (request, reply) => {
+  app.post('/sessions', async (request, reply) => {
     // Auth: brukeren må være innlogget
     const userId = (request as unknown as { userId?: string }).userId;
     if (!userId) {
