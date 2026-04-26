@@ -62,6 +62,7 @@ export type Task = {
   priority: 'high' | 'medium' | 'low' | null;
   dueAt: string | null;
   doneAt: string | null;
+  archivedAt: string | null;
   listType: 'today' | 'later' | 'someday';
 };
 
@@ -71,6 +72,7 @@ export type ShoppingItem = {
   content: string;
   category: string | null;
   checked: boolean;
+  archivedAt: string | null;
   addedBy: string | null;
   createdAt: string;
 };
