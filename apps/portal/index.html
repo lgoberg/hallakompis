@@ -103,23 +103,26 @@ var TJENESTER = [
   {
     navn: 'Godlia Rundt',
     beskrivelse: 'Tidtaking på idealtid. To runder, og den som sykler likest vinner.',
-    adresse: 'https://sykkeltid.hallakompis.no',
+    subdomene: 'sykkeltid',
+    tjeneste: 'sykkeltid',
     ikon: '🚲',
+    status: 'live'
+  },
+  {
+    navn: "10'ern",
+    beskrivelse: 'Kortspillet med melding og stikk. Holder styr på poeng, historikk og statistikk.',
+    subdomene: 'tiern',
+    tjeneste: 'tiern',
+    ikon: '🃏',
     status: 'live'
   },
   {
     navn: 'Kompis',
     beskrivelse: 'Min egen assistent. Oppgaver, handleliste og kalender.',
-    adresse: 'https://kompis.hallakompis.no',
+    subdomene: 'kompis',
+    tjeneste: 'hallakompis-web',
     ikon: '💬',
     status: 'snart'
-  },
-  {
-    navn: "10'ern",
-    beskrivelse: 'Kortspillet med melding og stikk. Holder styr på poeng, historikk og statistikk.',
-    adresse: 'https://tiern.hallakompis.no',
-    ikon: '🃏',
-    status: 'live'
   }
 ];
 
@@ -129,13 +132,27 @@ var TJENESTER = [
       .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
+  /* Adressa avledes av hvor portalen selv kjører. Ser vi den på en
+     *.code.run-adresse, er vi før domenet er satt opp, og da skal lenkene gå
+     dit tjenestene faktisk svarer. Ellers går de til hallakompis.no.
+     Uten dette ville hvert kort vært en død lenke fram til DNS var på plass. */
+  function adresse(t){
+    if(t.adresse) return t.adresse;
+    var vert = location.hostname;
+    var m = vert.match(/^p\d+--[\w-]+--([\w]+)\.code\.run$/);
+    if(m && t.tjeneste) return 'https://p01--' + t.tjeneste + '--' + m[1] + '.code.run';
+    if(t.subdomene) return 'https://' + t.subdomene + '.hallakompis.no';
+    return '';
+  }
+
   var live = TJENESTER.filter(function(t){ return t.status === 'live'; });
   var snart = TJENESTER.filter(function(t){ return t.status !== 'live'; });
 
   function kort(t){
-    var erLenke = t.status === 'live' && t.adresse;
+    var url = adresse(t);
+    var erLenke = t.status === 'live' && url;
     var tagg = erLenke ? 'a' : 'div';
-    var attr = erLenke ? ' href="' + esc(t.adresse) + '"' : '';
+    var attr = erLenke ? ' href="' + esc(url) + '"' : '';
     return '<' + tagg + ' class="tjeneste' + (erLenke ? '' : ' snart') + '"' + attr + '>'
       + '<span class="ikon">' + esc(t.ikon || '•') + '</span>'
       + (erLenke ? '<span class="pil">→</span>' : '')
