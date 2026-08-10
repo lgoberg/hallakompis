@@ -10,7 +10,22 @@
       90% { transform: rotate(0deg); }
     }
     .arm{ transform-origin: 96px 72px; animation: vink 4.5s ease-in-out infinite; }
-    @media (prefers-reduced-motion: reduce){ .arm{ animation: none; } }
+
+    /* Blikket flytter seg i korte rykk med lange pauser, slik ekte oyne gjoer.
+       Glir de jevnt fram og tilbake, ser han svimmel ut. Pupillen kan flytte
+       seg 6 px foer den treffer kanten av det hvite, saa vi holder oss innafor. */
+    @keyframes seSegRundt{
+      0%, 20%   { transform: translate(0px, 0px); }
+      23%, 43%  { transform: translate(-4px, 1px); }
+      46%, 62%  { transform: translate(4px, -1px); }
+      65%, 75%  { transform: translate(2px, 3px); }
+      78%, 100% { transform: translate(0px, 0px); }
+    }
+    .pupiller{ animation: seSegRundt 7s steps(1, end) infinite; }
+
+    @media (prefers-reduced-motion: reduce){
+      .arm, .pupiller{ animation: none; }
+    }
   </style>
 
   <!-- antenne -->
@@ -34,8 +49,10 @@
   <!-- oyne -->
   <circle cx="49" cy="58" r="11" fill="#f6f4ef"/>
   <circle cx="79" cy="58" r="11" fill="#f6f4ef"/>
-  <circle cx="52" cy="60" r="5" fill="#16211f"/>
-  <circle cx="82" cy="60" r="5" fill="#16211f"/>
+  <g class="pupiller">
+    <circle cx="49" cy="59" r="5" fill="#16211f"/>
+    <circle cx="79" cy="59" r="5" fill="#16211f"/>
+  </g>
 
   <!-- smil -->
   <path d="M50 78 q14 13 28 0" stroke="#f6f4ef" stroke-width="6" stroke-linecap="round" fill="none"/>
