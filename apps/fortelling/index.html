@@ -1,0 +1,565 @@
+<!doctype html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#151a2b">
+<title>Fortellingen · hallakompis</title>
+<meta name="description" content="Skriv inn noe som har skjedd, så spinner Claude en historie ut av det.">
+<link rel="icon" href="ikon.svg">
+<link rel="apple-touch-icon" href="ikon.svg">
+<style>
+:root{
+  --natt:#151a2b;          /* kvelden utenfor vinduet */
+  --natt-dyp:#0e1220;
+  --papir:#FBF7EF;         /* siden i lampelyset */
+  --papir-kant:#e6ddcd;
+  --blekk:#1b1f2e;
+  --blekk-svak:#63677a;
+  --lampe:#E0A458;         /* det varme lyset */
+  --lampe-dus:#c9903f;
+  --lys:#EDEAE3;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{
+  background:
+    radial-gradient(90% 60% at 50% -10%, #26304d 0%, var(--natt) 48%, var(--natt-dyp) 100%);
+  background-attachment:fixed;
+  color:var(--lys);
+  font:16px/1.6 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  min-height:100vh;
+  padding:0 18px calc(60px + env(safe-area-inset-bottom));
+  scrollbar-gutter:stable;
+}
+.ramme{max-width:720px;margin:0 auto}
+
+/* ---------- topp ---------- */
+.topp{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:calc(18px + env(safe-area-inset-top)) 0 6px;
+}
+.merke{display:flex;align-items:center;gap:9px;font-size:19px;font-weight:800;letter-spacing:-.02em}
+.merke svg{width:26px;height:26px;flex:none}
+.tilbake{
+  color:rgba(237,234,227,.7);text-decoration:none;font-size:13.5px;font-weight:600;
+  border:1px solid rgba(237,234,227,.22);border-radius:999px;padding:7px 13px;white-space:nowrap;
+}
+.tilbake:hover{color:var(--lys);border-color:rgba(237,234,227,.5)}
+
+nav{display:flex;gap:8px;flex-wrap:wrap;padding:10px 0 16px}
+nav button{
+  font:inherit;font-size:14px;font-weight:700;color:rgba(237,234,227,.72);cursor:pointer;
+  background:transparent;border:1px solid rgba(237,234,227,.2);border-radius:999px;
+  padding:9px 16px;min-height:40px;
+}
+nav button.aktiv{background:var(--papir);color:var(--blekk);border-color:var(--papir)}
+
+/* ---------- kort ---------- */
+.kort{
+  background:var(--papir);color:var(--blekk);border:1px solid var(--papir-kant);
+  border-radius:16px;padding:20px;margin-bottom:16px;
+  box-shadow:0 18px 40px -26px rgba(0,0,0,.8);
+}
+.stikk{
+  font-size:11px;text-transform:uppercase;letter-spacing:.14em;font-weight:800;
+  color:var(--blekk-svak);margin-bottom:12px;
+}
+.dempet{color:var(--blekk-svak);font-size:14px}
+.paanatt{color:rgba(237,234,227,.6);font-size:13.5px;text-align:center}
+
+textarea{
+  width:100%;min-height:120px;resize:vertical;font:inherit;font-size:16px;line-height:1.55;
+  color:var(--blekk);background:#fff;border:1px solid var(--papir-kant);border-radius:12px;padding:13px 14px;
+}
+textarea:focus,input:focus{outline:2px solid var(--lampe);outline-offset:1px;border-color:var(--lampe)}
+input[type=text]{
+  width:100%;font:inherit;font-size:16px;color:var(--blekk);background:#fff;
+  border:1px solid var(--papir-kant);border-radius:10px;padding:11px 12px;
+}
+label.felt{display:block;font-size:12.5px;font-weight:700;color:var(--blekk-svak);margin:14px 0 6px}
+
+/* ---------- sjangervalg ---------- */
+.sjangre{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.sjanger{
+  text-align:left;font:inherit;cursor:pointer;background:#fff;color:var(--blekk);
+  border:1px solid var(--papir-kant);border-radius:12px;padding:12px 13px;min-height:88px;
+  display:flex;flex-direction:column;gap:3px;transition:border-color .15s ease, transform .15s ease;
+}
+.sjanger .ikon{font-size:20px;line-height:1}
+.sjanger .navn{font-weight:800;font-size:15px}
+.sjanger .om{font-size:12px;color:var(--blekk-svak);line-height:1.35}
+@media (hover:hover) and (pointer:fine){ .sjanger:hover{border-color:var(--lampe-dus);transform:translateY(-2px)} }
+.sjanger.valgt{border-color:var(--lampe);border-width:2px;padding:11px 12px;background:#FFFDF8}
+
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{
+  font:inherit;font-size:14px;font-weight:700;cursor:pointer;background:#fff;color:var(--blekk);
+  border:1px solid var(--papir-kant);border-radius:999px;padding:9px 15px;min-height:40px;
+}
+.chip small{display:block;font-size:11px;font-weight:600;color:var(--blekk-svak)}
+.chip.valgt{background:var(--blekk);color:var(--papir);border-color:var(--blekk)}
+.chip.valgt small{color:rgba(251,247,239,.7)}
+
+.knapp{
+  width:100%;font:inherit;font-size:16px;font-weight:800;cursor:pointer;
+  background:var(--blekk);color:var(--papir);border:none;border-radius:13px;
+  padding:15px 18px;min-height:52px;margin-top:18px;
+}
+.knapp:disabled{background:#9aa0b0;cursor:default}
+.knapp.lys{background:#fff;color:var(--blekk);border:1px solid var(--papir-kant)}
+.liten{
+  font:inherit;font-size:13px;font-weight:700;cursor:pointer;background:#fff;color:var(--blekk);
+  border:1px solid var(--papir-kant);border-radius:999px;padding:8px 14px;min-height:38px;
+}
+.liten:disabled{opacity:.5;cursor:default}
+.liten.aktiv{background:var(--blekk);color:var(--papir);border-color:var(--blekk)}
+.lenke{background:none;border:none;font:inherit;font-size:13px;color:var(--blekk-svak);
+  text-decoration:underline;cursor:pointer;padding:6px 0}
+
+/* ---------- selve historien ---------- */
+.historie{
+  font-family:Georgia,"Iowan Old Style","Times New Roman",serif;
+  font-size:18.5px;line-height:1.72;color:var(--blekk);
+}
+.historie p{margin:0 0 1.05em}
+.historie p:first-of-type::first-letter{
+  float:left;font-size:3.1em;line-height:.82;padding:.06em .09em 0 0;font-weight:700;color:var(--lampe-dus);
+}
+h1.tittel{
+  font-family:Georgia,"Iowan Old Style",serif;font-size:29px;line-height:1.2;
+  font-weight:700;letter-spacing:-.01em;margin-bottom:6px;
+}
+.merkelapp{
+  display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;
+  color:var(--blekk-svak);border:1px solid var(--papir-kant);border-radius:999px;padding:4px 11px;
+}
+.merkerad{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:18px}
+
+/* ---------- spilleren ---------- */
+.spiller{
+  background:#FFFDF8;border:1px solid var(--papir-kant);border-radius:13px;padding:14px;margin-top:20px;
+}
+.stemmevalg{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin:10px 0 4px}
+.stemme{
+  text-align:left;font:inherit;cursor:pointer;background:#fff;color:var(--blekk);
+  border:1px solid var(--papir-kant);border-radius:10px;padding:9px 11px;min-height:56px;
+}
+.stemme b{display:block;font-size:14px}
+.stemme span{font-size:11.5px;color:var(--blekk-svak);line-height:1.3}
+.stemme.valgt{border-color:var(--lampe);border-width:2px;padding:8px 10px}
+.stemme .lagret{font-size:10px;font-weight:800;color:var(--lampe-dus);letter-spacing:.06em}
+audio{width:100%;margin-top:12px}
+
+/* ---------- historikk ---------- */
+.rad{
+  display:flex;align-items:center;gap:12px;padding:13px 0;border-top:1px solid var(--papir-kant);
+  cursor:pointer;
+}
+.rad:first-of-type{border-top:none}
+.rad .ikon{font-size:20px;flex:none}
+.rad .midt{flex:1;min-width:0}
+.rad .tit{font-weight:700;font-size:15.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rad .under{font-size:12.5px;color:var(--blekk-svak)}
+.rad .pil{color:var(--blekk-svak);flex:none}
+.tom{color:var(--blekk-svak);font-size:14.5px;font-style:italic}
+
+/* ---------- venting ---------- */
+.venter{text-align:center;padding:34px 12px}
+.penn{font-size:30px;display:inline-block;animation:vugge 2.4s ease-in-out infinite}
+@keyframes vugge{0%,100%{transform:rotate(-9deg)}50%{transform:rotate(9deg)}}
+.venter p{margin-top:12px;font-size:15px;color:var(--blekk-svak)}
+.varsel{
+  background:#FFF4E2;border:1px solid var(--lampe);color:#7a4f12;
+  border-radius:12px;padding:12px 14px;margin-bottom:14px;font-size:14.5px;
+}
+.stemmerad{display:flex;align-items:center;gap:10px;padding:11px 0;border-top:1px solid var(--papir-kant)}
+.stemmerad:first-of-type{border-top:none}
+.stemmerad .midt{flex:1;min-width:0}
+.stemmerad code{font-size:11.5px;color:var(--blekk-svak);word-break:break-all}
+.sjangerhaker{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.hake{
+  font:inherit;font-size:12px;font-weight:700;cursor:pointer;background:#fff;color:var(--blekk-svak);
+  border:1px solid var(--papir-kant);border-radius:999px;padding:5px 11px;
+}
+.hake.paa{background:var(--blekk);color:var(--papir);border-color:var(--blekk)}
+@media (max-width:520px){
+  h1.tittel{font-size:25px}
+  .historie{font-size:17.5px}
+  .kort{padding:17px}
+}
+</style>
+</head>
+<body>
+<div class="ramme">
+  <div class="topp">
+    <div class="merke">
+      <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
+        <path d="M4 7c4-2 8-2 12 1v20c-4-3-8-3-12-1V7z" fill="#FBF7EF" opacity=".92"/>
+        <path d="M28 7c-4-2-8-2-12 1v20c4-3 8-3 12-1V7z" fill="#E0A458"/>
+        <path d="M16 8v20" stroke="#151a2b" stroke-width="1.4"/>
+      </svg>
+      <span>Fortellingen</span>
+    </div>
+    <a class="tilbake" href="#" id="tilbakeLenke">&larr; hallakompis</a>
+  </div>
+  <nav id="faner"></nav>
+  <div id="app"></div>
+</div>
+
+<script>
+/* =============================================================================
+   Fortellingen. Skriv inn noe som har skjedd, få en historie tilbake.
+   Ingen rammeverk, ingen bygg. Alt tegnes fra tilstanden i DATA.
+   ============================================================================= */
+var DATA = null;
+var skjerm = "ny";           // ny | historikk | stemmer
+var valgtSjanger = "fantasi";
+var valgtLengde = "middels";
+var innspillTekst = "";
+var skriver = false;
+var apenFortelling = null;   // id på fortellingen som leses
+var valgtStemme = null;
+var lagerLyd = false;
+var lydUrl = null;
+var beskjed = "";
+var redigererStemme = null;
+
+var app = document.getElementById("app");
+var faner = document.getElementById("faner");
+
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){
+  return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c];});}
+
+/* Portalen ligger på et annet vertsnavn før hallakompis.no er satt opp, så
+   tilbakelenka utledes av hvor vi selv kjører. */
+(function(){
+  var m = location.hostname.match(/^p\d+--[\w-]+--([\w]+)\.code\.run$/);
+  document.getElementById("tilbakeLenke").href =
+    m ? "https://p01--portal--" + m[1] + ".code.run/" : "https://hallakompis.no/";
+})();
+
+async function hent(){
+  var r = await fetch("api/tilstand");
+  DATA = await r.json();
+  tegn();
+}
+
+async function send(sti, kropp){
+  var r = await fetch("api/" + sti, {method:"POST",
+    headers:{"Content-Type":"application/json"}, body: JSON.stringify(kropp||{})});
+  var d = await r.json().catch(function(){ return {}; });
+  if(!r.ok){ beskjed = d.feil || "Noe gikk galt."; return null; }
+  return d;
+}
+
+function sjangerAv(id){ return (DATA.sjangre||[]).find(function(s){return s.id===id;}) || DATA.sjangre[0]; }
+function lengdeAv(id){ return (DATA.lengder||[]).find(function(l){return l.id===id;}) || DATA.lengder[1]; }
+function fortellingAv(id){ return (DATA.fortellinger||[]).find(function(f){return f.id===id;}); }
+
+function datoTekst(ms){
+  var d = new Date(ms), n = new Date();
+  var mnd = ["januar","februar","mars","april","mai","juni","juli","august","september","oktober","november","desember"];
+  var t = d.getDate() + ". " + mnd[d.getMonth()];
+  if(d.getFullYear() !== n.getFullYear()) t += " " + d.getFullYear();
+  return t;
+}
+
+/* ---------- rammen ---------- */
+function tegn(){
+  var f = [["ny","Ny fortelling"],["historikk","Historikk"],["stemmer","Stemmer"]];
+  faner.innerHTML = f.map(function(x){
+    return '<button data-fane="'+x[0]+'" class="'+(skjerm===x[0]?"aktiv":"")+'">'+x[1]+'</button>';
+  }).join("");
+  faner.querySelectorAll("[data-fane]").forEach(function(b){
+    b.addEventListener("click", function(){
+      skjerm = b.dataset.fane; apenFortelling = null; beskjed = ""; window.scrollTo(0,0); tegn();
+    });
+  });
+
+  var varsel = beskjed ? '<div class="varsel">'+esc(beskjed)+'</div>' : "";
+  if(apenFortelling) return tegnLesing(varsel);
+  if(skjerm === "historikk") return tegnHistorikk(varsel);
+  if(skjerm === "stemmer") return tegnStemmer(varsel);
+  tegnNy(varsel);
+}
+
+/* ---------- ny fortelling ---------- */
+function tegnNy(varsel){
+  if(skriver){
+    app.innerHTML = varsel + '<div class="kort"><div class="venter">'
+      + '<div class="penn">🖋️</div>'
+      + '<p>Fortelleren tenker seg om.<br>En '+esc(lengdeAv(valgtLengde).navn.toLowerCase())
+      + ' historie tar gjerne et halvt minutt.</p></div></div>';
+    return;
+  }
+
+  var sjangerkort = (DATA.sjangre||[]).map(function(s){
+    return '<button class="sjanger '+(valgtSjanger===s.id?"valgt":"")+'" data-sjanger="'+s.id+'">'
+      + '<span class="ikon">'+s.emoji+'</span>'
+      + '<span class="navn">'+esc(s.navn)+'</span>'
+      + '<span class="om">'+esc(s.kort)+'</span></button>';
+  }).join("");
+
+  var lengdechips = (DATA.lengder||[]).map(function(l){
+    return '<button class="chip '+(valgtLengde===l.id?"valgt":"")+'" data-lengde="'+l.id+'">'
+      + esc(l.navn) + '<small>ca ' + l.minutter + ' min</small></button>';
+  }).join("");
+
+  var mangler = !DATA.claude
+    ? '<div class="varsel">Claude er ikke koblet til her, så historier kan ikke skrives ennå.</div>' : "";
+
+  app.innerHTML = varsel + mangler + '<div class="kort">'
+    + '<div class="stikk">Hva har skjedd?</div>'
+    + '<p class="dempet" style="margin-bottom:10px">Fra dagen, uka, måneden eller året. Smått er helt fint. '
+    + 'Jo mer ekte det er, jo bedre blir historien.</p>'
+    + '<textarea id="innspill" maxlength="4000" placeholder="Vi har fått to kattunger. De heter Pjusk og Pusi, og de har allerede veltet juletreet en gang hver.">'
+    + esc(innspillTekst) + '</textarea>'
+    + '<label class="felt">Hva slags historie?</label>'
+    + '<div class="sjangre">' + sjangerkort + '</div>'
+    + '<label class="felt">Hvor lang?</label>'
+    + '<div class="chips">' + lengdechips + '</div>'
+    + '<button class="knapp" id="skrivBtn"'+(DATA.claude?"":" disabled")+'>Skriv fortellingen</button>'
+    + '</div>'
+    + '<p class="paanatt">Historien lagres, så dere kan lese og høre den igjen senere.</p>';
+
+  var ta = document.getElementById("innspill");
+  ta.addEventListener("input", function(){ innspillTekst = ta.value; });
+  app.querySelectorAll("[data-sjanger]").forEach(function(b){
+    b.addEventListener("click", function(){ valgtSjanger = b.dataset.sjanger; tegn(); });
+  });
+  app.querySelectorAll("[data-lengde]").forEach(function(b){
+    b.addEventListener("click", function(){ valgtLengde = b.dataset.lengde; tegn(); });
+  });
+  document.getElementById("skrivBtn").addEventListener("click", skrivFortelling);
+}
+
+async function skrivFortelling(){
+  var tekst = (document.getElementById("innspill")||{}).value || innspillTekst;
+  innspillTekst = tekst;
+  if(tekst.trim().length < 3){ beskjed = "Skriv litt om hva som har skjedd først."; return tegn(); }
+  beskjed = ""; skriver = true; tegn();
+  var d = await send("fortell", {innspill: tekst, sjanger: valgtSjanger, lengde: valgtLengde});
+  skriver = false;
+  if(d && d.fortelling){
+    await hent();
+    innspillTekst = "";
+    apenFortelling = d.fortelling.id;
+    valgtStemme = null; lydUrl = null;
+    window.scrollTo(0,0);
+  }
+  tegn();
+}
+
+/* ---------- lesing ---------- */
+function tegnLesing(varsel){
+  var f = fortellingAv(apenFortelling);
+  if(!f){ apenFortelling = null; return tegn(); }
+  var sj = sjangerAv(f.sjanger);
+  var stemmer = sj.stemmer || [];
+  if(!valgtStemme) valgtStemme = stemmer[0];
+
+  var avsnitt = f.historie.split(/\n\s*\n/).map(function(a){
+    return "<p>" + esc(a.trim()).replace(/\n/g,"<br>") + "</p>";
+  }).join("");
+
+  var stemmekort = stemmer.map(function(id){
+    var s = (DATA.stemmer||{})[id] || {navn:id, preg:""};
+    var harLyd = f.lyd && f.lyd[id];
+    return '<button class="stemme '+(valgtStemme===id?"valgt":"")+'" data-stemme="'+id+'">'
+      + '<b>'+esc(s.navn)+'</b><span>'+esc(s.preg)+'</span>'
+      + (harLyd ? '<span class="lagret">LEST INN</span>' : "") + '</button>';
+  }).join("");
+
+  var spiller = '<div class="spiller">'
+    + '<div class="stikk" style="margin-bottom:2px">Hør den lest opp</div>'
+    + '<p class="dempet">Fire stemmer som passer '+esc(sj.navn.toLowerCase())+'. '
+    + 'Den som er lest inn før spilles med en gang.</p>'
+    + '<div class="stemmevalg">'+stemmekort+'</div>'
+    + '<button class="knapp lys" id="lesBtn"'+(lagerLyd?" disabled":"")+'>'
+    + (lagerLyd ? "Leser inn ..." : "Les opp") + '</button>'
+    + (lydUrl ? '<audio id="lyd" controls autoplay preload="auto" src="'+esc(lydUrl)+'"></audio>' : "")
+    + '</div>';
+
+  app.innerHTML = varsel + '<div class="kort">'
+    + '<div class="merkerad">'
+    + '<span class="merkelapp">'+sj.emoji+' '+esc(sj.navn)+'</span>'
+    + '<span class="merkelapp">'+f.ord+' ord</span>'
+    + '<span class="merkelapp">'+esc(datoTekst(f.laget))+'</span>'
+    + '</div>'
+    + '<h1 class="tittel">'+esc(f.tittel)+'</h1>'
+    + '<div class="historie">'+avsnitt+'</div>'
+    + spiller
+    + '</div>'
+    + '<div class="kort"><div class="stikk">Skrevet ut fra</div>'
+    + '<p class="dempet">'+esc(f.innspill)+'</p>'
+    + '<button class="lenke" id="slettBtn">Slett denne fortellingen</button></div>'
+    + '<button class="knapp lys" id="tilbakeBtn">Tilbake</button>';
+
+  app.querySelectorAll("[data-stemme]").forEach(function(b){
+    b.addEventListener("click", function(){
+      if(valgtStemme === b.dataset.stemme) return;
+      valgtStemme = b.dataset.stemme; lydUrl = null; tegn();
+    });
+  });
+  document.getElementById("lesBtn").addEventListener("click", lesOpp);
+  document.getElementById("tilbakeBtn").addEventListener("click", function(){
+    apenFortelling = null; lydUrl = null; valgtStemme = null;
+    skjerm = "historikk"; window.scrollTo(0,0); tegn();
+  });
+  document.getElementById("slettBtn").addEventListener("click", async function(){
+    if(!confirm("Slette \""+f.tittel+"\"? Lyden forsvinner også.")) return;
+    await send("slett", {id: f.id});
+    apenFortelling = null; lydUrl = null;
+    await hent();
+    skjerm = "historikk"; tegn();
+  });
+}
+
+async function lesOpp(){
+  var f = fortellingAv(apenFortelling);
+  if(!f || !valgtStemme) return;
+  beskjed = ""; lagerLyd = true; lydUrl = null; tegn();
+  var d = await send("lyd", {id: f.id, stemme: valgtStemme});
+  lagerLyd = false;
+  if(d && d.url){
+    lydUrl = d.url;
+    await hent();          // «lest inn»-merket skal komme på med en gang
+    apenFortelling = f.id; // hent() tegner, men vi vil bli stående i lesingen
+  }
+  tegn();
+}
+
+/* ---------- historikk ---------- */
+function tegnHistorikk(varsel){
+  var liste = DATA.fortellinger || [];
+  var rader = liste.length ? liste.map(function(f){
+    var sj = sjangerAv(f.sjanger);
+    var lest = f.lyd ? Object.keys(f.lyd).length : 0;
+    return '<div class="rad" data-apne="'+f.id+'">'
+      + '<span class="ikon">'+sj.emoji+'</span>'
+      + '<span class="midt"><span class="tit">'+esc(f.tittel)+'</span>'
+      + '<span class="under">'+esc(sj.navn)+' &middot; '+f.ord+' ord &middot; '+esc(datoTekst(f.laget))
+      + (lest ? ' &middot; ' + lest + (lest===1?" innlesning":" innlesninger") : "")
+      + '</span></span><span class="pil">&rsaquo;</span></div>';
+  }).join("") : '<p class="tom">Ingen fortellinger ennå. Skriv den første under «Ny fortelling».</p>';
+
+  app.innerHTML = varsel + '<div class="kort"><div class="stikk">Alle fortellinger</div>'+rader+'</div>'
+    + '<p class="paanatt">Innlest lyd ligger lagret, så den koster ingenting å høre om igjen.</p>';
+
+  app.querySelectorAll("[data-apne]").forEach(function(r){
+    r.addEventListener("click", function(){
+      apenFortelling = r.dataset.apne; valgtStemme = null; lydUrl = null;
+      window.scrollTo(0,0); tegn();
+    });
+  });
+}
+
+/* ---------- egne stemmer ---------- */
+function tegnStemmer(varsel){
+  var egne = DATA.egneStemmer || [];
+  var rader = egne.length ? egne.map(function(s){
+    return '<div class="stemmerad"><span class="midt">'
+      + '<b>'+esc(s.navn)+'</b>'
+      + (s.preg ? ' <span class="dempet">'+esc(s.preg)+'</span>' : "")
+      + '<br><code>'+esc(s.stemmeId)+'</code>'
+      + '<span class="sjangerhaker">' + (s.sjangre||[]).map(function(id){
+          var sj = sjangerAv(id); return '<span class="hake paa">'+sj.emoji+' '+esc(sj.navn)+'</span>';
+        }).join("") + '</span></span>'
+      + '<button class="liten" data-rediger="'+s.id+'">Endre</button></div>';
+  }).join("") : '<p class="tom">Ingen egne stemmer ennå.</p>';
+
+  var r = redigererStemme || {navn:"", stemmeId:"", preg:"", sjangre:[]};
+  var haker = (DATA.sjangre||[]).map(function(sj){
+    var paa = (r.sjangre||[]).indexOf(sj.id) >= 0;
+    return '<button class="hake '+(paa?"paa":"")+'" data-hake="'+sj.id+'">'+sj.emoji+' '+esc(sj.navn)+'</button>';
+  }).join("");
+
+  app.innerHTML = varsel
+    + '<div class="kort"><div class="stikk">Egne stemmer</div>'
+    + '<p class="dempet" style="margin-bottom:12px">Lager du en stemme i ElevenLabs, limer du inn ID-en her. '
+    + 'Knytt den til sjangrene den passer, så dukker den opp først i stemmevalget der.</p>'
+    + rader + '</div>'
+    + '<div class="kort"><div class="stikk">'+(redigererStemme&&redigererStemme.id?"Endre stemme":"Legg til stemme")+'</div>'
+    + '<label class="felt">Navn</label>'
+    + '<input type="text" id="sNavn" maxlength="30" value="'+esc(r.navn)+'" placeholder="Bestefar">'
+    + '<label class="felt">Stemme-ID fra ElevenLabs</label>'
+    + '<input type="text" id="sId" value="'+esc(r.stemmeId)+'" placeholder="21m00Tcm4TlvDq8ikWAM">'
+    + '<label class="felt">Kjennemerke</label>'
+    + '<input type="text" id="sPreg" maxlength="80" value="'+esc(r.preg||"")+'" placeholder="lun og litt hes">'
+    + '<label class="felt">Passer til</label>'
+    + '<div class="sjangerhaker">'+haker+'</div>'
+    + '<div class="chips" style="margin-top:16px">'
+    + '<button class="liten" id="provBtn">Hør en prøve</button>'
+    + (redigererStemme&&redigererStemme.id ? '<button class="liten" id="slettStemme">Slett</button>' : "")
+    + (redigererStemme ? '<button class="liten" id="avbryt">Avbryt</button>' : "")
+    + '</div>'
+    + '<button class="knapp" id="lagreStemme">Lagre stemmen</button>'
+    + '<audio id="prov" controls style="display:none"></audio>'
+    + '</div>';
+
+  function les(){
+    return {
+      id: redigererStemme && redigererStemme.id,
+      navn: document.getElementById("sNavn").value.trim(),
+      stemmeId: document.getElementById("sId").value.trim(),
+      preg: document.getElementById("sPreg").value.trim(),
+      sjangre: (redigererStemme && redigererStemme.sjangre) || []
+    };
+  }
+  app.querySelectorAll("[data-hake]").forEach(function(b){
+    b.addEventListener("click", function(){
+      var naa = les();
+      var i = naa.sjangre.indexOf(b.dataset.hake);
+      if(i>=0) naa.sjangre.splice(i,1); else naa.sjangre.push(b.dataset.hake);
+      redigererStemme = naa; tegn();
+    });
+  });
+  app.querySelectorAll("[data-rediger]").forEach(function(b){
+    b.addEventListener("click", function(){
+      redigererStemme = egne.find(function(x){return x.id===b.dataset.rediger;});
+      window.scrollTo(0,0); tegn();
+    });
+  });
+  var avbryt = document.getElementById("avbryt");
+  if(avbryt) avbryt.addEventListener("click", function(){ redigererStemme = null; tegn(); });
+
+  document.getElementById("lagreStemme").addEventListener("click", async function(){
+    var s = les();
+    if(!s.navn || !s.stemmeId){ beskjed = "Både navn og stemme-ID må fylles ut."; return tegn(); }
+    beskjed = "";
+    await send("stemme", s);
+    redigererStemme = null;
+    await hent();
+  });
+  document.getElementById("provBtn").addEventListener("click", async function(){
+    var s = les();
+    if(!s.stemmeId){ beskjed = "Lim inn en stemme-ID først."; return tegn(); }
+    var knapp = document.getElementById("provBtn");
+    knapp.disabled = true; knapp.textContent = "Henter ...";
+    try{
+      var r = await fetch("api/stemme/prov", {method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({stemmeId: s.stemmeId})});
+      if(!r.ok){ var d = await r.json().catch(function(){return {};});
+        beskjed = d.feil || "Fikk ikke prøvd stemmen."; return tegn(); }
+      var lyd = document.getElementById("prov");
+      lyd.src = URL.createObjectURL(await r.blob());
+      lyd.style.display = "block";
+      lyd.play().catch(function(){ /* brukeren kan trykke play selv */ });
+    }finally{
+      knapp.disabled = false; knapp.textContent = "Hør en prøve";
+    }
+  });
+  var sl = document.getElementById("slettStemme");
+  if(sl) sl.addEventListener("click", async function(){
+    if(!confirm("Slette stemmen fra lista?")) return;
+    await send("stemme/slett", {id: redigererStemme.id});
+    redigererStemme = null;
+    await hent();
+  });
+}
+
+hent();
+</script>
+</body>
+</html>

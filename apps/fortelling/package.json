@@ -1,0 +1,9 @@
+{
+  "name": "fortelling",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Fortellingen - skriv inn noe som har skjedd, få en historie tilbake",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "dependencies": { "@anthropic-ai/sdk": "^0.71.0" }
+}
