@@ -469,6 +469,7 @@ var sokTekst = '';
 var gruppering = 'sammenlagt';
 var sisteHtml = null;
 var sisteFaner = null;
+var sisteStruktur = null;
 
 /* Egen adresse for publikum: /resultat viser bare resultatlista, uten
    innlogging og uten spor av tidtakingsverktøyet. */
@@ -492,9 +493,11 @@ function varsle(tekst){
   setTimeout(function(){ b.remove(); }, 2800);
 }
 
+/* Kvitteringen for et trykk er at ruta bytter farge og at feltet nederst sier
+   hvem som ble registrert. Her lyste tidligere HELE siden opp i 80 ms, noe som
+   på en skjerm leses som at appen laster på nytt. Vibrasjonen beholdes: den
+   merkes gjennom hansker og forstyrrer ingen. */
 function blink(){
-  document.body.style.filter = 'brightness(1.25)';
-  setTimeout(function(){ document.body.style.filter = ''; }, 80);
   if (navigator.vibrate){ try{ navigator.vibrate(30); }catch(e){} }
 }
 
@@ -543,6 +546,18 @@ function tegn(){
   else { s.className = 'status av'; s.textContent = 'frakoblet'; }
 
   el('angreKnapp').disabled = !angreStabel.length;
+
+  // Rask vei for rutenettet: så lenge strukturen er den samme, pusses rutene
+  // der de står. Det er denne veien som går ved hver eneste registrering.
+  // sisteHtml === null betyr at noen har bedt om full tegning, og da skal den
+  // raske veien holde seg unna.
+  if (aktivFane === 'rutenett' && token && l.deltakere.length && sisteHtml !== null){
+    var struktur = rutenettStruktur(l);
+    if (struktur === sisteStruktur && oppdaterRutenettPaaPlass(l)) return;
+    sisteStruktur = struktur;
+  }else{
+    sisteStruktur = null;
+  }
 
   var innhold = '';
   if (!token && aktivFane !== 'resultat') innhold = htmlLoggInn();
@@ -602,6 +617,86 @@ function htmlLoggInn(){
 }
 
 /* -------------------------------------------------------------- rutenettet */
+
+function sorterteDeltakere(l){
+  return l.deltakere.slice().sort(function(a,b){ return a.nr - b.nr; });
+}
+
+function stripeInnhold(ikkeStartet, ute, ferdige, utenNummer){
+  return '<span>Ikke startet <b>' + ikkeStartet + '</b></span>'
+    + '<span>Ute på løypa <b>' + ute + '</b></span>'
+    + '<span>I mål <b>' + ferdige + '</b></span>'
+    + (utenNummer ? '<span>Uten nummer <b>' + utenNummer + '</b></span>' : '');
+}
+
+/* Alt som avgjør hvordan én rute ser ut. Brukes både når rutenettet bygges
+   første gang og når det oppdateres på plass, slik at de to ikke kan sprike. */
+function ruteTilstand(l, d, median){
+  var t = F.tilstandFor(l, d);
+  return {
+    kode: t.kode,
+    bekreft: bekreftNr === d.nr,
+    forventet: F.forventetNeste(l, d, median),
+    merke: t.kode === 'gronn' ? '✓'
+      : t.kode === 'dns' ? 'DNS' : t.kode === 'dnf' ? 'DNF'
+      : (t.kode === 'oransje' || t.kode === 'lilla') ? 'R' + t.paaRunde : ''
+  };
+}
+
+/* Oppdaterer rutene der de står, i stedet for å bygge hele innholdet på nytt.
+   Full ombygging ved hver registrering fikk skjermen til å se ut som om appen
+   lastet på nytt, og rev samtidig vekk knappen under fingeren til den som
+   trykker. Returnerer false når strukturen har endret seg og en ekte
+   ombygging trengs. */
+function oppdaterRutenettPaaPlass(l){
+  var grid = document.querySelector('.rutenett');
+  if (!grid) return false;
+  var deltakere = sorterteDeltakere(l);
+  if (grid.children.length !== deltakere.length) return false;
+
+  var median = F.medianRunde(l);
+  var ute = 0, ferdige = 0, ikkeStartet = 0;
+
+  for (var i = 0; i < deltakere.length; i++){
+    var node = grid.children[i];
+    if (Number(node.getAttribute('data-rute')) !== deltakere[i].nr) return false;
+
+    var s = ruteTilstand(l, deltakere[i], median);
+    if (s.kode === 'gronn') ferdige++;
+    else if (s.kode === 'oransje' || s.kode === 'lilla') ute++;
+    else if (s.kode === 'hvit') ikkeStartet++;
+
+    // forfalt styres av tikk(), så den skal overleve en oppdatering her
+    var klasse = 'rute r-' + s.kode + (s.bekreft ? ' bekreft' : '')
+      + (node.classList.contains('forfalt') ? ' forfalt' : '');
+    if (node.className !== klasse) node.className = klasse;
+
+    var merke = node.querySelector('.rmerke');
+    if (merke && merke.textContent !== s.merke) merke.textContent = s.merke;
+
+    var fv = s.forventet == null ? null : String(s.forventet);
+    if (node.getAttribute('data-forv') !== fv){
+      if (fv == null) node.removeAttribute('data-forv');
+      else node.setAttribute('data-forv', fv);
+    }
+  }
+
+  var stripe = el('stripe');
+  if (stripe){
+    var nyStripe = stripeInnhold(ikkeStartet, ute, ferdige, F.utildelte(l).length);
+    if (stripe.innerHTML !== nyStripe) stripe.innerHTML = nyStripe;
+  }
+  return true;
+}
+
+/* Endrer noe av dette seg, holder det ikke å pusse på rutene: da må innholdet
+   bygges på nytt. */
+function rutenettStruktur(l){
+  return l.deltakere.length + '|' + F.utildelte(l).length + '|' + (valgtBanket || '')
+    + '|' + rutenettKolonner(l.deltakere.length, F.utildelte(l).length > 0)
+    + '|' + l.antallRunder + '|' + advarsler();
+}
+
 function htmlRutenett(l){
   if (!l.deltakere.length){
     return kort('Ingen deltakere ennå',
@@ -623,12 +718,7 @@ function htmlRutenett(l){
   });
 
   var h = '';
-  h += '<div class="stripe">'
-    + '<span>Ikke startet <b>' + ikkeStartet + '</b></span>'
-    + '<span>Ute på løypa <b>' + ute + '</b></span>'
-    + '<span>I mål <b>' + ferdige + '</b></span>'
-    + (banket.length ? '<span>Uten nummer <b>' + banket.length + '</b></span>' : '')
-    + '</div>';
+  h += '<div class="stripe" id="stripe">' + stripeInnhold(ikkeStartet, ute, ferdige, banket.length) + '</div>';
 
   if (banket.length){
     h += '<div class="kort" style="padding:10px 12px"><h2 style="margin-bottom:6px">'
@@ -648,22 +738,18 @@ function htmlRutenett(l){
 
   h += '<div class="kort"><div class="rutenett" style="grid-template-columns:repeat('
     + rutenettKolonner(l.deltakere.length, banket.length > 0) + ',1fr)">'
-    + l.deltakere.slice().sort(function(a,b){ return a.nr - b.nr; }).map(function(d){
-        var t = F.tilstandFor(l, d);
-        var forventet = F.forventetNeste(l, d, median);
-        var merke = t.kode === 'gronn' ? '✓'
-          : t.kode === 'dns' ? 'DNS' : t.kode === 'dnf' ? 'DNF'
-          : (t.kode === 'oransje' || t.kode === 'lilla') ? 'R' + t.paaRunde : '';
+    + sorterteDeltakere(l).map(function(d){
+        var s = ruteTilstand(l, d, median);
         // Ringbredden settes av tikk(), ikke her. Sto den i HTML-en, ville
         // teksten endret seg hver frame, og hele rutenettet blitt bygget på
         // nytt under fingeren til den som trykker.
-        return '<button class="rute r-' + t.kode + (bekreftNr===d.nr?' bekreft':'') + '"'
+        return '<button class="rute r-' + s.kode + (s.bekreft ? ' bekreft' : '') + '"'
           + ' data-rute="' + d.nr + '"'
-          + (forventet != null ? ' data-forv="' + forventet + '"' : '')
+          + (s.forventet != null ? ' data-forv="' + s.forventet + '"' : '')
           + ' aria-label="' + esc(d.nr + ' ' + (d.navn||'')) + '">'
           + '<span class="rtall">' + d.nr + '</span>'
           + '<span class="rnavn">' + esc(fornavn(d.navn)) + '</span>'
-          + (merke ? '<span class="rmerke">' + merke + '</span>' : '')
+          + '<span class="rmerke">' + s.merke + '</span>'
           + '<span class="rring"></span>'
           + '</button>';
       }).join('')
