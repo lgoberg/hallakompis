@@ -18,6 +18,17 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
+/* Claude skriver karakterboka. Lastes defensivt: mangler pakken eller
+   noekkelen, faller appen tilbake paa de haandskrevne reglene i klienten og
+   fungerer akkurat som foer. Spillet skal aldri staa paa at en API henger. */
+let AnthropicKlasse = null;
+try {
+  const mod = require('@anthropic-ai/sdk');
+  AnthropicKlasse = mod.default || mod.Anthropic || mod;
+} catch (e) {
+  console.log('[10ern] @anthropic-ai/sdk mangler, karakterboka bruker de faste reglene');
+}
+
 const PORT = Number(process.env.PORT) || 4710;
 const DATA_DIR = process.env.TIERN_DATA || path.join(__dirname, 'data');
 const FIL = path.join(DATA_DIR, 'tiern.json');
@@ -36,6 +47,9 @@ function tomState() {
     aktivtSpill: null,
     historikk: [],
     innstillinger: { base: 10, zero: 5, miss: 0, slam: 50 },
+    // {signatur, linjer:[{navn,linje}], laget} - signaturen er et avtrykk av
+    // tallene, saa vi vet naar kommentarene er utdaterte
+    karakterbok: null,
     versjon: 0
   };
 }
@@ -122,6 +136,91 @@ function serverFil(res, filnavn) {
   res.end(kropp);
 }
 
+/* =============================================================================
+   Karakterboka
+
+   Én setning per spiller, med et glimt i øyet. Strukturert output brukes med
+   vilje: da kan svaret ikke komme tilbake som prosa vi maa gjette oss gjennom.
+   Lav effort fordi dette er korte, morsomme linjer og ikke et resonnement.
+   ============================================================================= */
+const KARAKTER_SCHEMA = {
+  type: 'object',
+  properties: {
+    linjer: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          navn: { type: 'string' },
+          linje: { type: 'string' }
+        },
+        required: ['navn', 'linje'],
+        additionalProperties: false
+      }
+    }
+  },
+  required: ['linjer'],
+  additionalProperties: false
+};
+
+const KARAKTER_SYSTEM = [
+  'Du skriver karakterboka for et kortspill en familie spiller sammen.',
+  'For hver spiller skriver du én setning på norsk bokmål, med et glimt i øyet.',
+  '',
+  'Regler:',
+  '- Den som leder skal få høre det, med en spydighet som er varm, ikke slem.',
+  '- Den som sliter skal få en ekte oppmuntring. Aldri en spydighet til den som ligger sist.',
+  '- Bruk tallene du får. Ikke finn på tall som ikke står der.',
+  '- Setningen er en fortsettelse rett etter navnet. Ikke skriv navnet først.',
+  '- Du kan gjerne bruke navnet inni setningen når det kler poenget.',
+  '- Maks 25 ord. Ingen emoji. Ingen tankestrek, bruk komma eller punktum.',
+  '- Har spilleren null kamper, si noe lunt om at han ikke har satt seg til bordet ennå.',
+  '- Skriv ulike setninger. Ikke gjenta samme vits på flere spillere.',
+  '',
+  'Eksempel på tonen, for en spiller som heter Jack og vinner alt:',
+  '"er kongen, men selv konger kan falle. Klarer Jack å holde på tronen?"'
+].join('\n');
+
+async function skrivKarakterbok(stat) {
+  const klient = new AnthropicKlasse();
+  const svarMelding = await klient.messages.create({
+    model: 'claude-opus-5',
+    max_tokens: 4000,
+    system: KARAKTER_SYSTEM,
+    output_config: {
+      effort: 'low',
+      format: { type: 'json_schema', schema: KARAKTER_SCHEMA }
+    },
+    messages: [{
+      role: 'user',
+      content: 'Her er statistikken. Skriv én linje per spiller.\n\n'
+        + JSON.stringify(stat.map(s => ({
+            navn: s.navn,
+            kamper: s.kamper,
+            seire: s.seire,
+            seiersprosent: s.seiersProsent,
+            snittpoeng: s.snitt,
+            besteKamp: s.beste,
+            treffprosentPaaMelding: s.treffProsent,
+            riktigeNullmeldinger: s.nuller,
+            slam: s.slam
+          })), null, 1)
+    }]
+  });
+
+  if (svarMelding.stop_reason === 'refusal') throw new Error('avslått');
+
+  const tekst = svarMelding.content.filter(b => b.type === 'text').map(b => b.text).join('');
+  const data = JSON.parse(tekst);
+  if (!data || !Array.isArray(data.linjer)) throw new Error('uventet svarform');
+
+  // ta bare med spillere vi faktisk spurte om, og kutt lengden
+  const kjente = new Set(stat.map(s => String(s.navn)));
+  return data.linjer
+    .filter(l => l && kjente.has(String(l.navn)) && typeof l.linje === 'string')
+    .map(l => ({ navn: String(l.navn), linje: String(l.linje).trim().slice(0, 240) }));
+}
+
 const FARGER = ['#B23A2E', '#2E6B8F', '#C0883A', '#3F6B4C', '#7A4A86', '#3A3A3A', '#8F5B2E', '#2E8F7B'];
 
 function nyId() { return crypto.randomBytes(6).toString('hex'); }
@@ -196,6 +295,40 @@ const tjener = http.createServer(async (req, res) => {
       if (state.aktivtSpill) state.aktivtSpill.scoring = Object.assign({}, state.innstillinger);
       lagre();
       return svar(res, 200, state);
+    }
+
+    /* --- karakterboka, skrevet av Claude --- */
+    if (sti === '/api/karakterbok') {
+      if (!AnthropicKlasse || !process.env.ANTHROPIC_API_KEY) {
+        return svar(res, 503, {
+          feil: 'Claude er ikke koblet til her. Karakterboka bruker de faste kommentarene.'
+        });
+      }
+      const stat = Array.isArray(kropp.statistikk) ? kropp.statistikk : [];
+      if (!stat.length) return svar(res, 400, { feil: 'Ingen spillere å skrive om' });
+
+      // Klienten regner ut tallene (den eier poengreglene); serveren signerer
+      // dem, slik at signaturen blir den samme for de samme tallene.
+      const signatur = crypto.createHash('sha256')
+        .update(JSON.stringify(stat.map(s => [s.navn, s.kamper, s.seire, s.snitt,
+          s.treffProsent, s.beste, s.nuller, s.slam])))
+        .digest('hex').slice(0, 16);
+
+      if (!kropp.tving && state.karakterbok && state.karakterbok.signatur === signatur) {
+        return svar(res, 200, state);
+      }
+
+      try {
+        const linjer = await skrivKarakterbok(stat);
+        state.karakterbok = { signatur, linjer, laget: Date.now() };
+        lagre();
+        return svar(res, 200, state);
+      } catch (e) {
+        console.error('[10ern] karakterbok feilet: ' + e.message);
+        return svar(res, 502, {
+          feil: 'Claude svarte ikke denne gangen. Prøv igjen, eller bruk de faste kommentarene.'
+        });
+      }
     }
 
     if (sti === '/api/avslutt') {

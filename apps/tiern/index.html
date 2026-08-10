@@ -214,6 +214,12 @@
     font-weight:600;margin:10px 0}
   .drow{display:flex;align-items:center;gap:10px;padding:11px 0;border-top:1px solid var(--line)}
   .drow:first-of-type{border-top:none}
+  /* karakterboka: prikken på egen linje-start, teksten flyter ved siden av */
+  .karakter{display:flex;gap:10px;padding:11px 0;border-top:1px solid var(--line);align-items:flex-start}
+  .karakter:first-of-type{border-top:none}
+  .karakter .pdot{width:11px;height:11px;margin-top:6px;flex:none}
+  .karakter p{font-size:14.5px;line-height:1.45;color:var(--ink-soft);margin:0}
+  .karakter p b{color:var(--ink);font-weight:700}
   .drow .navn{flex:1;font-weight:600;font-size:16px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 </style>
 </head>
@@ -730,15 +736,19 @@ function spillerStatIKamp(sp, pi){
 }
 
 /* Statistikk slås sammen på NAVN, ikke på id. En gjest som senere blir fast
-   spiller skal ikke få to rader, og gamle kamper har uansett bare navnet. */
+   spiller skal ikke få to rader, og gamle kamper har uansett bare navnet.
+   De faste spillerne legges inn først, slik at de står i lista fra dagen de
+   opprettes og ikke først etter sin første kamp. */
 function samletStatistikk(){
   const per = {};
-  function sikre(navn, farge){
-    const n = navn.trim();
-    if(!per[n]) per[n] = {navn:n, farge:farge, kamper:0, seire:0, poengSum:0,
+  function sikre(navn, farge, fast){
+    const n = String(navn).trim();
+    if(!per[n]) per[n] = {navn:n, farge:farge, fast:!!fast, kamper:0, seire:0, poengSum:0,
       beste:null, treff:0, runder:0, nuller:0, slam:0};
+    if(fast){ per[n].fast = true; per[n].farge = farge; }
     return per[n];
   }
+  DATA.deltakere.forEach(d=>sikre(d.navn, d.farge, true));
   DATA.historikk.forEach(sp=>{
     const vinnere = vinnereAv(sp);
     sp.players.forEach((p,pi)=>{
@@ -760,6 +770,98 @@ function samletStatistikk(){
   }));
 }
 
+/* Karakterboka. Én linje per spiller, med et glimt i øyet. Regelen er at den
+   som leder skal få høre det, og den som sliter skal få en dytt i ryggen og
+   aldri en spydighet. Reglene prøves i rekkefølge, første treff vinner, og
+   de spisseste ligger øverst. */
+function karakteristikk(s, alle){
+  const n = s.navn;
+  const spilt = alle.filter(x=>x.kamper>0);
+  const flestSeire = Math.max(0, ...spilt.map(x=>x.seire));
+  const bestTreff = Math.max(0, ...spilt.map(x=>x.treffProsent));
+  const bestSnitt = Math.max(0, ...spilt.map(x=>x.snitt));
+  const bestEnkelt = Math.max(0, ...spilt.map(x=>x.beste||0));
+  const svakestSnitt = spilt.length ? Math.min(...spilt.map(x=>x.snitt)) : 0;
+  const alene = spilt.length < 2;
+
+  if(s.kamper === 0)
+    return "har ikke satt seg til bordet ennå. Stolen står klar.";
+
+  if(s.kamper === 1 && s.seire === 1)
+    return "vant den eneste kampen sin. Hundre prosent seiersrate, og et godt tidspunkt å legge opp på.";
+
+  if(s.kamper === 1)
+    return "har én kamp bak seg. For tidlig å dømme noen, men vi noterer.";
+
+  if(!alene && s.seire === flestSeire && s.seire > 0 && s.seiersProsent >= 60 && s.kamper >= 3)
+    return "er kongen med " + s.seire + " seire av " + s.kamper + ". Men selv konger faller. Klarer " + n + " å holde på tronen?";
+
+  if(!alene && s.seire === flestSeire && s.seire > 0)
+    return "leder seiersrekka med " + s.seire + ". Ingen andre sover særlig godt.";
+
+  if(s.seire === 0 && s.kamper >= 5)
+    return s.kamper + " kamper, null seire. Nå er det ikke evner som mangler, bare en kveld der kortene gidder.";
+
+  if(s.seire === 0)
+    return "venter fortsatt på den første seieren. Den henger løsere enn den ser ut til.";
+
+  if(!alene && s.treffProsent === bestTreff && s.treffProsent >= 60 && s.seire < flestSeire)
+    return "treffer meldingene best av alle med " + s.treffProsent + " prosent, og samler tydeligvis poeng til de andre.";
+
+  if(!alene && s.treffProsent === bestTreff && s.treffProsent >= 60)
+    return "melder som en klokke, " + s.treffProsent + " prosent treff. Ubehagelig presist.";
+
+  if(s.treffProsent <= 40 && s.seire > 0)
+    return "bommer på meldingene i ett sett og vinner likevel. Det er nesten frekt.";
+
+  if(!alene && (s.beste||0) === bestEnkelt && bestEnkelt > 0)
+    return "har rekorden med " + s.beste + " poeng i én kamp. Den kvelden satt alt.";
+
+  if(s.nuller >= 5)
+    return "har landet " + s.nuller + " riktige nullmeldinger. Kunsten å ikke ville ha noe.";
+
+  if(!alene && s.snitt === bestSnitt && s.seire < flestSeire)
+    return "har best snitt uten å vinne mest. Jevn som få, og litt uheldig.";
+
+  if(!alene && s.snitt === svakestSnitt && spilt.length > 2)
+    return "ligger nederst på snitt akkurat nå. Det er en utmerket plass å ta sats fra.";
+
+  if(s.slam > 0)
+    return "har tatt " + s.slam + (s.slam===1?" slam":" slam") + ". Noen liker å ta hele bordet.";
+
+  return "holder følge. Ingenting å skryte av, ingenting å skamme seg over.";
+}
+
+/* Claudes karakterbok. Den blir utdatert når en ny kamp lagres eller når en
+   spiller kommer til, og da faller vi tilbake til de faste reglene til noen ber
+   om nye linjer. Vi gjetter aldri: mangler linja for en spiller, brukes regelen
+   for akkurat den spilleren. */
+let skriverKarakterbok = false;
+
+function karakterbokFersk(){
+  const k = DATA.karakterbok;
+  if(!k || !Array.isArray(k.linjer) || !k.linjer.length) return false;
+  const nyeste = DATA.historikk.length
+    ? (DATA.historikk[0].avsluttet || DATA.historikk[0].created) : 0;
+  if(nyeste > k.laget) return false;
+  const harLinje = new Set(k.linjer.map(l=>l.navn));
+  return samletStatistikk().every(s => harLinje.has(s.navn));
+}
+
+function claudeLinjer(){
+  const kart = {};
+  (DATA.karakterbok.linjer || []).forEach(l => { kart[l.navn] = l.linje; });
+  return kart;
+}
+
+async function hentKarakterbok(){
+  if(skriverKarakterbok) return;
+  skriverKarakterbok = true; feilmelding = ""; tegn();
+  await send("karakterbok", {statistikk: samletStatistikk(), tving: true});
+  skriverKarakterbok = false;
+  tegn();
+}
+
 let statSortering = "seire";
 function tegnStatistikk(varsel){
   footer.innerHTML = DATA.aktivtSpill
@@ -767,9 +869,25 @@ function tegnStatistikk(varsel){
     : `<div class="inner"><button class="btn" id="nyKamp2">Start ny kamp</button></div>`;
 
   const stat = samletStatistikk();
-  if(!stat.length){
-    app.innerHTML = varsel + `<div class="card"><div class="eyebrow">Statistikk</div>
-      <p class="tom">Statistikken fylles ut etter hvert som kamper lagres.</p></div>`;
+  const harKamper = DATA.historikk.length > 0;
+  const fraClaude = karakterbokFersk() ? claudeLinjer() : null;
+
+  // Karakterboka står øverst: det er den folk faktisk leser høyt.
+  const karakterkort = stat.length ? `<div class="card">
+      <div class="eyebrow">Karakterboka${fraClaude ? ' · skrevet av Claude' : ''}</div>
+      ${stat.slice().sort((a,b)=> b.seire-a.seire || b.snitt-a.snitt || a.navn.localeCompare(b.navn,'no'))
+        .map(s=>`<div class="karakter">
+          <span class="pdot" style="background:${s.farge}"></span>
+          <p><b>${escapeHtml(s.navn)}</b> ${escapeHtml((fraClaude && fraClaude[s.navn]) || karakteristikk(s, stat))}</p>
+        </div>`).join("")}
+      <button class="ghost-btn" id="nyeKommentarer" ${skriverKarakterbok?"disabled":""}>
+        ${skriverKarakterbok ? "Claude skriver ..." : (fraClaude ? "Skriv nye kommentarer" : "La Claude skrive kommentarene")}
+      </button>
+    </div>` : "";
+
+  if(!harKamper){
+    app.innerHTML = varsel + karakterkort + `<div class="card"><div class="eyebrow">Statistikk</div>
+      <p class="tom">${stat.length ? "Tallene fylles ut så snart første kamp er lagret." : "Statistikken fylles ut etter hvert som kamper lagres."}</p></div>`;
   }else{
     const sorter = {
       seire:(a,b)=>b.seire-a.seire || b.snitt-a.snitt,
@@ -786,12 +904,14 @@ function tegnStatistikk(varsel){
         <td>${s.treffProsent}%</td>
       </tr>`).join("");
 
-    const flest = stat.slice().sort((a,b)=>b.seire-a.seire)[0];
-    const beste = stat.slice().sort((a,b)=>(b.beste||0)-(a.beste||0))[0];
-    const skarpest = stat.slice().sort((a,b)=>b.treffProsent-a.treffProsent)[0];
+    // rekordene skal bare regnes blant dem som faktisk har spilt
+    const spilt = stat.filter(s=>s.kamper>0);
+    const flest = spilt.slice().sort((a,b)=>b.seire-a.seire)[0];
+    const beste = spilt.slice().sort((a,b)=>(b.beste||0)-(a.beste||0))[0];
+    const skarpest = spilt.slice().sort((a,b)=>b.treffProsent-a.treffProsent)[0];
     const totaltSlam = stat.reduce((a,s)=>a+s.slam,0);
 
-    app.innerHTML = varsel + `
+    app.innerHTML = varsel + karakterkort + `
       <div class="card">
         <div class="eyebrow">Gjennom ${DATA.historikk.length} kamper</div>
         <div class="drow"><div class="navn">Flest seire</div>
@@ -820,6 +940,8 @@ function tegnStatistikk(varsel){
       statSortering = b.dataset.sort; tegn();
     }));
   }
+  const k=document.getElementById("nyeKommentarer");
+  if(k) k.addEventListener("click", hentKarakterbok);
   const t=document.getElementById("tilSpill2");
   if(t) t.addEventListener("click",()=>{ skjerm="spill"; window.scrollTo(0,0); tegn(); });
   const n=document.getElementById("nyKamp2");
