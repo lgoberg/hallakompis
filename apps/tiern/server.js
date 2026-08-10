@@ -169,13 +169,27 @@ const KARAKTER_SYSTEM = [
   'Du skriver karakterboka for et kortspill en familie spiller sammen.',
   'For hver spiller skriver du én setning på norsk bokmål, med et glimt i øyet.',
   '',
-  'Du får tre slags stoff, og det beste kommer av å sy dem sammen:',
+  'Du får fire slags stoff, og det beste kommer av å sy dem sammen:',
   '1. Statistikken over alle kamper.',
-  '2. Hvordan siste kamp gikk.',
+  '2. Hvordan siste kamp gikk, og hva kommentatoren sa underveis.',
   '3. Kveldsnotatet: hvor de var, hva de spiste, været, humøret før og etter',
   '   målt i terningkast fra 1 til 6, og kanskje et sitat fra kvelden.',
+  '4. tidligereKvelder: de forrige kveldene, hver med sitt notat og resultat.',
   'Se etter forbindelsen mellom dem. Falt humøret til den som tapte? Vant noen',
   'rett etter en dårlig middag? Slikt er gull, bruk det.',
+  '',
+  'LET ETTER MØNSTRE PÅ TVERS AV KVELDER. Vinner Jack hver gang det er taco,',
+  'er det den morsomste linja du kan skrive. Men bare når tallene faktisk viser',
+  'det: to sammentreff er tilfeldig, tre eller flere er et mønster.',
+  '',
+  'Du velger selv hva som er verdt å si om hver spiller, og du får overraske oss.',
+  'Er det åpenbare kjedelig, ta noe annet. Finn gjerne din egen vri.',
+  '',
+  'Noen spillere har alder oppgitt. Alder er gøy stoff, bruk det:',
+  '- Er spilleren 18 eller eldre, hører vin til bordet.',
+  '- Er spilleren under 18, vanker det i beste fall en brus.',
+  '- Tull med alderen når det kler poenget, både oppover og nedover.',
+  '- Aldersforskjellen mellom den yngste og den eldste ved bordet er alltid verdt en spiss.',
   '',
   'Regler:',
   '- Den som leder skal få høre det, med en spydighet som er varm, ikke slem.',
@@ -195,28 +209,56 @@ const KARAKTER_SYSTEM = [
    nettopp skjedde, ikke en oppsummering av stillingen. */
 const KOMMENTATOR_SYSTEM = [
   'Du er kommentator for et kortspill en familie spiller rundt bordet.',
-  'Du får vite hva som nettopp skjedde i runden som ble ferdig.',
+  'Du kalles på to tidspunkt, og feltet "fase" sier hvilket:',
+  '- meldingene er inne, stikkene er ikke spilt: ingen vet ennå hvem som får rett.',
+  '  Kommenter meldingene. Er de ivrige? Feige? Melder noen null igjen?',
+  '  Du skal IKKE spå fasiten som om du vet den. Du kan gjerne gjette høyt.',
+  '- runden er ferdig: kommenter det som nettopp skjedde.',
   '',
-  'Skriv ÉN setning på norsk bokmål om akkurat den runden.',
+  'Skriv ÉN setning på norsk bokmål.',
+  '',
+  'Stoffet du får, og hva det er godt for:',
+  '- Runden selv: meldinger, stikk, poeng, hvem som leder.',
+  '- statistikkOverAlleKamper: hvem de er over tid. Bruk dette til å sette',
+  '  runden i sammenheng. "Han som aldri bommer bommet nå" er bedre enn "han bommet".',
+  '- tidligereKvelder: hva som skjedde de forrige gangene, med notat om hva de',
+  '  spiste, været, stedet. LET ETTER MØNSTRE PÅ TVERS AV KVELDER. Vinner Jack',
+  '  hver gang det er taco, så si det. Men bare når tallene faktisk viser det:',
+  '  to tilfeldige sammentreff er ikke et mønster, tre eller flere er.',
+  '- notatOmDagen: hvor de er akkurat i kveld, hva de spiser, humøret.',
+  '- alder: er spilleren 18 eller eldre hører vin til bordet, er spilleren under',
+  '  18 vanker det i beste fall en brus.',
+  '',
+  'Variasjon er det viktigste kravet:',
+  '- alleredeSagt er alt du har sagt før. Ikke gjenta en formulering, en vits',
+  '  eller en vinkling som står der. Ikke gjenbruk åpningsordet ditt heller.',
+  '- Bytt register fra gang til gang. Du kan være tørr sportskommentator, du kan',
+  '  snakke direkte til én spiller, du kan trekke fram noe fra en tidligere kveld,',
+  '  du kan la deg rive med, du kan si noe stillferdig.',
+  '',
+  'Du velger selv. Du får overraske oss:',
+  '- Du bestemmer hva som er verdt å si. Er det åpenbare kjedelig, ta noe annet:',
+  '  en detalj fra notatet, et mønster ingen har lagt merke til, en spissformulering',
+  '  om en som har vært stille lenge.',
+  '- Finn gjerne på din egen vri. Det er lov å være rar en gang iblant.',
   '',
   'Regler:',
-  '- Kommenter det som nettopp skjedde, ikke stillingen generelt.',
-  '- Se etter det morsomme: en som meldte høyt og bommet, en som satt musestille',
-  '  på null og traff, en som tok alle stikkene, en ledelse som snudde.',
   '- Spydig er lov, men alltid varmt. Dette er familie, ikke fiender.',
   '- Bruk navn. Bruk tallene du får, ikke finn på nye.',
-  '- Maks 20 ord. Ingen emoji. Ingen tankestrek.',
-  '- Ikke start med "Runde X". Gå rett på det som skjedde.'
+  '- Maks 25 ord. Ingen emoji. Ingen tankestrek.',
+  '- Ikke start med "Runde X". Gå rett på saken.'
 ].join('\n');
 
 async function skrivKommentar(situasjon) {
   const klient = new AnthropicKlasse();
   const m = await klient.messages.create({
     model: 'claude-opus-5',
-    max_tokens: 2000,
+    max_tokens: 4000,
     system: KOMMENTATOR_SYSTEM,
     output_config: {
-      effort: 'low',
+      // medium, ikke low: han skal lete etter en vinkling og et moenster paa
+      // tvers av kvelder, ikke ta den foerste setningen som melder seg
+      effort: 'medium',
       format: {
         type: 'json_schema',
         schema: {
@@ -235,14 +277,15 @@ async function skrivKommentar(situasjon) {
   return String(data.kommentar || '').trim().slice(0, 200);
 }
 
-async function skrivKarakterbok(stat, sisteKamp, kveldsnotat) {
+async function skrivKarakterbok(stat, sisteKamp, kveldsnotat, tidligereKvelder) {
   const klient = new AnthropicKlasse();
   const svarMelding = await klient.messages.create({
     model: 'claude-opus-5',
-    max_tokens: 4000,
+    max_tokens: 8000,
     system: KARAKTER_SYSTEM,
     output_config: {
-      effort: 'low',
+      // moenstre paa tvers av kvelder krever at han faktisk leter
+      effort: 'medium',
       format: { type: 'json_schema', schema: KARAKTER_SCHEMA }
     },
     messages: [{
@@ -250,6 +293,7 @@ async function skrivKarakterbok(stat, sisteKamp, kveldsnotat) {
       content: 'Skriv én linje per spiller.\n\n' + JSON.stringify({
         statistikkOverAlleKamper: stat.map(s => ({
           navn: s.navn,
+          alder: s.alder != null ? s.alder : undefined,
           kamper: s.kamper,
           seire: s.seire,
           seiersprosent: s.seiersProsent,
@@ -260,7 +304,8 @@ async function skrivKarakterbok(stat, sisteKamp, kveldsnotat) {
           slam: s.slam
         })),
         sisteKamp: sisteKamp || null,
-        kveldsnotat: kveldsnotat || null
+        kveldsnotat: kveldsnotat || null,
+        tidligereKvelder: tidligereKvelder || []
       }, null, 1)
     }]
   });
@@ -281,6 +326,17 @@ async function skrivKarakterbok(stat, sisteKamp, kveldsnotat) {
 const FARGER = ['#B23A2E', '#2E6B8F', '#C0883A', '#3F6B4C', '#7A4A86', '#3A3A3A', '#8F5B2E', '#2E8F7B'];
 
 function nyId() { return crypto.randomBytes(6).toString('hex'); }
+
+/* Fodselsaar er frivillig: tomt felt betyr «ikke oppgitt», ikke aar null.
+   Alt utenfor et troverdig spenn kastes, saa en slurvefeil ikke gir Claude
+   en 400 aar gammel spiller aa tulle med. */
+function reinFodselsaar(v) {
+  if (v === '' || v === null || v === undefined) return null;
+  const n = Math.round(Number(v));
+  const iAar = new Date().getFullYear();
+  if (!Number.isFinite(n) || n < 1900 || n > iAar) return null;
+  return n;
+}
 
 const tjener = http.createServer(async (req, res) => {
   const sti = decodeURIComponent((req.url || '/').split('?')[0]);
@@ -313,7 +369,11 @@ const tjener = http.createServer(async (req, res) => {
       }
       const brukte = state.deltakere.map(d => d.farge);
       const farge = FARGER.find(f => !brukte.includes(f)) || FARGER[state.deltakere.length % FARGER.length];
-      state.deltakere.push({ id: nyId(), navn, farge, opprettet: Date.now() });
+      state.deltakere.push({
+        id: nyId(), navn, farge,
+        fodselsaar: reinFodselsaar(kropp.fodselsaar),
+        opprettet: Date.now()
+      });
       lagre();
       return svar(res, 200, state);
     }
@@ -323,6 +383,7 @@ const tjener = http.createServer(async (req, res) => {
       if (!d) return svar(res, 404, { feil: 'Fant ikke deltakeren' });
       if (kropp.navn != null) d.navn = String(kropp.navn).trim().slice(0, 20) || d.navn;
       if (kropp.farge) d.farge = String(kropp.farge);
+      if ('fodselsaar' in kropp) d.fodselsaar = reinFodselsaar(kropp.fodselsaar);
       lagre();
       return svar(res, 200, state);
     }
@@ -355,6 +416,59 @@ const tjener = http.createServer(async (req, res) => {
       return svar(res, 200, state);
     }
 
+    /* --- les opp ---
+       Samme form som TTS-proxyen i api-appen: ElevenLabs, mp3 tilbake, og 501
+       naar noekkelen mangler saa klienten kan falle tilbake paa nettleserens
+       egen stemme i stedet for aa staa der stum. */
+    if (sti === '/api/les-opp') {
+      const noekkel = process.env.ELEVENLABS_API_KEY;
+      const stemme = process.env.ELEVENLABS_VOICE_ID;
+      const modell = process.env.ELEVENLABS_MODEL_ID || 'eleven_turbo_v2_5';
+      if (!noekkel || !stemme) {
+        return svar(res, 501, { feil: 'Stemmen er ikke satt opp her', fallback: 'nettleser' });
+      }
+      const tekst = String(kropp.tekst || '').trim().slice(0, 4000);
+      if (!tekst) return svar(res, 400, { feil: 'Ingen tekst å lese' });
+
+      try {
+        const opp = await fetch(
+          'https://api.elevenlabs.io/v1/text-to-speech/' + encodeURIComponent(stemme) + '/stream',
+          {
+            method: 'POST',
+            headers: { 'xi-api-key': noekkel, 'Content-Type': 'application/json', Accept: 'audio/mpeg' },
+            body: JSON.stringify({
+              text: tekst,
+              model_id: modell,
+              output_format: 'mp3_44100_128',
+              // lav stabilitet gir mer liv i stemmen: den faar lov til aa
+              // smile og legge trykk der teksten inviterer til det
+              voice_settings: {
+                stability: 0.38,
+                similarity_boost: 0.75,
+                style: 0.55,
+                use_speaker_boost: true
+              }
+            })
+          }
+        );
+        if (!opp.ok) {
+          const detalj = await opp.text().catch(() => '');
+          console.error('[10ern] elevenlabs ' + opp.status + ': ' + detalj.slice(0, 300));
+          return svar(res, 502, { feil: 'Stemmen svarte ikke', fallback: 'nettleser' });
+        }
+        const lyd = Buffer.from(await opp.arrayBuffer());
+        res.writeHead(200, {
+          'Content-Type': 'audio/mpeg',
+          'Content-Length': lyd.length,
+          'Cache-Control': 'no-store'
+        });
+        return res.end(lyd);
+      } catch (e) {
+        console.error('[10ern] les-opp feilet: ' + e.message);
+        return svar(res, 502, { feil: 'Stemmen svarte ikke', fallback: 'nettleser' });
+      }
+    }
+
     /* --- kommentatoren, mens kampen pågår --- */
     if (sti === '/api/kommentator') {
       if (!AnthropicKlasse || !process.env.ANTHROPIC_API_KEY) {
@@ -385,7 +499,7 @@ const tjener = http.createServer(async (req, res) => {
       // dem, slik at signaturen blir den samme for de samme tallene.
       const signatur = crypto.createHash('sha256')
         .update(JSON.stringify([
-          stat.map(s => [s.navn, s.kamper, s.seire, s.snitt, s.treffProsent, s.beste, s.nuller, s.slam]),
+          stat.map(s => [s.navn, s.alder, s.kamper, s.seire, s.snitt, s.treffProsent, s.beste, s.nuller, s.slam]),
           kropp.sisteKamp || null,
           kropp.kveldsnotat || null
         ]))
@@ -396,7 +510,8 @@ const tjener = http.createServer(async (req, res) => {
       }
 
       try {
-        const linjer = await skrivKarakterbok(stat, kropp.sisteKamp, kropp.kveldsnotat);
+        const linjer = await skrivKarakterbok(
+          stat, kropp.sisteKamp, kropp.kveldsnotat, kropp.tidligereKvelder);
         state.karakterbok = { signatur, linjer, laget: Date.now() };
         lagre();
         return svar(res, 200, state);
