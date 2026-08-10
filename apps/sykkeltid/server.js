@@ -126,15 +126,24 @@ function ryddKopier() {
   } catch (e) {}
 }
 
+/* Oektene slettes for godt naar koden endres, ikke bare avvises ved
+   sammenligning. Sammenligning alene er ikke nok: gaar du tilbake til en kode
+   du har brukt foer, ville signaturen stemt igjen og gamle token vaaknet til
+   live. Her er de borte fra fila. */
 function lesOkter() {
   try {
-    if (fs.existsSync(OKT_FIL)) return JSON.parse(fs.readFileSync(OKT_FIL, 'utf8'));
+    if (fs.existsSync(OKT_FIL)) {
+      const d = JSON.parse(fs.readFileSync(OKT_FIL, 'utf8'));
+      if (d && d.okter && d.signatur === kodeSignatur()) return d.okter;
+    }
   } catch (e) {}
   return {};
 }
 
 function lagreOkter() {
-  try { fs.writeFileSync(OKT_FIL, JSON.stringify(okter)); } catch (e) {}
+  try {
+    fs.writeFileSync(OKT_FIL, JSON.stringify({ signatur: kodeSignatur(), okter: okter }));
+  } catch (e) {}
 }
 
 /* ------------------------------------------------------------ kringkasting */
@@ -327,6 +336,7 @@ const tjener = http.createServer(async (req, res) => {
 sikreMapper();
 lop = lesLop();
 okter = lesOkter();
+lagreOkter();   // stempler fila med gjeldende kode, så en kodeendring er endelig
 
 tjener.listen(PORT, () => {
   console.log('[sykkeltid] kjører på http://localhost:' + PORT);
