@@ -135,6 +135,21 @@
     font-size:20px;cursor:pointer;display:grid;place-items:center}
   .suit-btn.sel{border-color:var(--ink);background:var(--surface);box-shadow:0 0 0 2px var(--ink) inset}
   .suit-btn.r{color:var(--red)} .suit-btn.b{color:var(--ink)}
+  /* trumftrekket: kortet som er "oppe" akkurat nå løftes, og det som blir
+     stående til slutt får et lite blink */
+  .suit-btn.trekkes{transform:scale(1.18);border-color:var(--gold);box-shadow:0 0 0 2px var(--gold) inset;
+    transition:transform .06s ease}
+  .suit-btn.landet{animation:landing .5s ease}
+  @keyframes landing{
+    0%{transform:scale(1.35);box-shadow:0 0 0 4px var(--gold) inset}
+    60%{transform:scale(.96)}
+    100%{transform:scale(1)}
+  }
+  .trekk-knapp{
+    border:1px dashed var(--line);background:var(--paper);border-radius:10px;height:38px;
+    padding:0 12px;font-size:13px;font-weight:700;color:var(--ink-soft);cursor:pointer;white-space:nowrap;
+  }
+  .trekk-knapp:disabled{opacity:.5}
 
   .prow{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:10px;
     padding:11px 0;border-top:1px solid var(--line)}
@@ -200,6 +215,12 @@
   /* historikk og statistikk */
   .kamp{border-top:1px solid var(--line);padding:12px 0;cursor:pointer}
   .kamp:first-of-type{border-top:none}
+  .datoskille{
+    font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--gold);margin:16px 0 2px;padding-top:12px;border-top:1px solid var(--line);
+  }
+  .datoskille:first-child{margin-top:0;padding-top:0;border-top:none}
+  .datoskille + .kamp{border-top:none}
   .kamp-topp{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
   .kamp-dato{font-size:12.5px;color:var(--ink-soft);font-weight:600}
   .kamp-vinner{font-weight:700;font-size:16px;display:flex;align-items:center;gap:8px;min-width:0}
@@ -462,7 +483,17 @@ function tegnOppsett(varsel){
       <button class="rm" data-rm-ekstra="${i}">&times;</button>
     </div>`).join("");
 
-  app.innerHTML = varsel + `
+  // Forkastet kamp ligger til side og kan hentes tilbake. Et feiltrykk skal
+  // ikke koste dere en halvspilt kamp.
+  const angreKort = DATA.forkastet ? `<div class="card" style="border-color:var(--gold)">
+      <div class="eyebrow">Forkastet kamp</div>
+      <p class="muted" style="margin:0 0 10px">Du forkastet kampen med
+        ${escapeHtml(DATA.forkastet.spill.players.map(p=>p.name).join(", "))},
+        ${DATA.forkastet.spill.rounds.filter(r=>r.confirmed).length} runder spilt.</p>
+      <button class="btn lys" id="angreForkast">Hent kampen tilbake</button>
+    </div>` : "";
+
+  app.innerHTML = varsel + angreKort + `
     <div class="card">
       <div class="eyebrow">Hvem spiller?</div>
       ${DATA.deltakere.length
@@ -499,6 +530,15 @@ function tegnOppsett(varsel){
   app.querySelectorAll("[data-rm-ekstra]").forEach(b=>b.addEventListener("click",()=>{
     o.ekstra.splice(+b.dataset.rmEkstra,1); if(o.firstDealer>0)o.firstDealer=0; tegn();
   }));
+  const angre = document.getElementById("angreForkast");
+  if(angre) angre.addEventListener("click", async ()=>{
+    const ok = await send("angre-forkast");
+    if(!ok) return;
+    oppsett = null; skjerm = "spill";
+    viewRound = Math.min(firstUnconfirmed(), S.rounds.length-1);
+    window.scrollTo(0,0); tegn();
+    varsle("Kampen er tilbake.");
+  });
   document.getElementById("addGjest").addEventListener("click",()=>{ o.ekstra.push(""); tegn(); });
   app.querySelectorAll("[data-dealer]").forEach(b=>b.addEventListener("click",()=>{
     o.firstDealer=+b.dataset.dealer; tegn();
@@ -556,9 +596,11 @@ function tegnSpill(varsel){
   const dealer = dealerOf(viewRound), lead = leaderOf(viewRound);
   const done = S.rounds.filter(x=>x.confirmed).length;
 
-  const trumpBtns = SUITS.map(su=>
-    `<button class="suit-btn ${su.cls} ${r.trump===su.k?"sel":""}" data-trump="${su.k}">${su.g}</button>`
-  ).join("");
+  const trumpBtns = SUITS.map(su=>{
+    const merke = trumfTrekk.aktiv && trumfTrekk.paa === su.k ? " trekkes"
+      : (trumfTrekk.landet === su.k ? " landet" : "");
+    return `<button class="suit-btn ${su.cls} ${r.trump===su.k?"sel":""}${merke}" data-trump="${su.k}">${su.g}</button>`;
+  }).join("");
 
   const prows = S.players.map((p,pi)=>{
     const isLead = pi===lead;
@@ -579,10 +621,12 @@ function tegnSpill(varsel){
 
   const bidSum = r.bids.reduce((a,b)=>a+b,0);
   const trickSum = r.tricks.reduce((a,b)=>a+b,0);
+  // Hvor mye over eller under er like nyttig som at det ER over eller under:
+  // det er tallet som forteller hvor hardt kampen om stikkene blir.
   let balTag, balTxt;
-  if(bidSum>r.cards){balTag="over";balTxt="Overmeldt";}
-  else if(bidSum<r.cards){balTag="under";balTxt="Undermeldt";}
-  else{balTag="even";balTxt="I balanse";}
+  if(bidSum>r.cards){ balTag="over"; balTxt="Overmeldt med " + (bidSum-r.cards); }
+  else if(bidSum<r.cards){ balTag="under"; balTxt="Undermeldt med " + (r.cards-bidSum); }
+  else{ balTag="even"; balTxt="I balanse"; }
   const trickOk = trickSum===r.cards;
 
   const order=[...S.players.keys()].sort((a,b)=>total(b)-total(a));
@@ -617,6 +661,8 @@ function tegnSpill(varsel){
         <span class="lab">Trumf</span>
         ${trumpBtns}
         <button class="suit-btn ${r.trump===null?"sel":""}" data-trump="none" style="font-size:13px;width:auto;padding:0 10px">&minus;</button>
+        <button class="trekk-knapp" id="trekkTrumf" ${trumfTrekk.aktiv?"disabled":""}>
+          ${trumfTrekk.aktiv ? "trekker ..." : "Trekk trumf"}</button>
       </div>
 
       <div class="rowhead" style="margin-top:14px">
@@ -638,7 +684,10 @@ function tegnSpill(varsel){
     </div>
   `;
 
-  footer.innerHTML = `<div class="inner">
+  // "Fortsett senere" er bare en vei ut av skjermen: kampen ligger allerede
+  // lagret på serveren og står der til dere kommer tilbake.
+  footer.innerHTML = `<div class="inner" style="display:flex;gap:10px">
+    <button class="btn lys" id="senere" style="flex:0 0 auto;padding-left:18px;padding-right:18px">Fortsett senere</button>
     <button class="btn" id="confirmR" ${trickOk?"":"disabled"}>${r.confirmed?"Lagre endring":"Fullfør runde"}</button>
   </div>`;
 
@@ -651,8 +700,15 @@ function tegnSpill(varsel){
     });
   });
   app.querySelectorAll("[data-trump]").forEach(b=>b.addEventListener("click",()=>{
+    if(trumfTrekk.aktiv) return;
     const t=b.dataset.trump; r.trump = t==="none"?null:t; lagreSpill(); tegn();
   }));
+  document.getElementById("trekkTrumf").addEventListener("click",()=>trekkTrumf(r));
+  document.getElementById("senere").addEventListener("click",async ()=>{
+    await lagreSpillNaa();
+    skjerm="historikk"; window.scrollTo(0,0); tegn();
+    varsle("Kampen ligger lagret. Den står der til dere fortsetter.");
+  });
   document.getElementById("prevR").addEventListener("click",()=>{if(viewRound>0){viewRound--;tegn();}});
   const nextB=document.getElementById("nextR");
   if(nextB&&!nextB.disabled)nextB.addEventListener("click",()=>{if(viewRound<S.rounds.length-1){viewRound++;tegn();}});
@@ -670,6 +726,31 @@ function tegnSpill(varsel){
     // etter tegningen, så runden er lagret og skjermen oppdatert først
     if(varNy) hentKommentar(runden);
   });
+}
+
+/* ----- TRUMFTREKKET -----
+   Kortstokken velger farge selv. Rulleringen bremser ned mot slutten, slik at
+   det siste hoppet henger litt i lufta. Antall steg er tilfeldig i et spenn på
+   åtte, og fire farger går opp i åtte, så hver farge er like sannsynlig. */
+let trumfTrekk = {aktiv:false, paa:null, landet:null};
+
+async function trekkTrumf(r){
+  if(trumfTrekk.aktiv) return;
+  const farger = SUITS.map(s=>s.k);
+  const steg = 16 + Math.floor(Math.random()*8);
+  trumfTrekk = {aktiv:true, paa:null, landet:null};
+  let pause = 55;
+  for(let n=0; n<steg; n++){
+    trumfTrekk.paa = farger[n % 4];
+    tegn();
+    await new Promise(res=>setTimeout(res, pause));
+    pause *= 1.13;                       // bremser jevnt ned
+  }
+  const valgt = farger[(steg-1) % 4];
+  r.trump = valgt;
+  trumfTrekk = {aktiv:false, paa:null, landet:valgt};
+  lagreSpill(); tegn();
+  setTimeout(()=>{ trumfTrekk.landet = null; if(skjerm==="spill") tegn(); }, 600);
 }
 
 /* ----- KOMMENTATOREN -----
@@ -886,7 +967,8 @@ function tegnHistorikk(varsel){
     app.innerHTML = varsel + `<div class="card"><div class="eyebrow">Historikk</div>
       <p class="tom">Ingen ferdigspilte kamper ennå. Når en kamp er lagret, havner den her.</p></div>`;
   }else{
-    const kamper = DATA.historikk.map(sp=>{
+    const kamper = grupperPaaDato(DATA.historikk).map(gruppe=>
+      `<div class="datoskille">${escapeHtml(gruppe.dato)}</div>` + gruppe.kamper.map(sp=>{
       const vinnere = vinnereAv(sp);
       const order=[...sp.players.keys()].sort((a,b)=>totalFor(sp,b)-totalFor(sp,a));
       const utvidet = valgtKamp === String(sp.created);
@@ -897,23 +979,28 @@ function tegnHistorikk(varsel){
             <span class="pdot" style="background:${sp.players[vinnere[0]].color}"></span>
             <span>${vinnere.map(w=>escapeHtml(sp.players[w].name)).join(" & ")}</span>
           </div>
-          <div class="kamp-dato">${datoTekst(sp.avsluttet||sp.created)}</div>
+          <div class="kamp-dato">${klokkeTekst(sp.avsluttet||sp.created)}</div>
         </div>
         <div class="kamp-linje">
           ${order.map(pi=>`<span class="mini"><i style="background:${sp.players[pi].color}"></i>${escapeHtml(sp.players[pi].name)} ${totalFor(sp,pi)}</span>`).join("")}
         </div>
+        ${notatSammendrag(sp)}
         ${utvidet ? `
           <div style="margin-top:12px">
             ${chartSvg(sp)}
             <div class="muted" style="margin-top:8px">${runder} runder spilt${runder<20?" (avbrutt)":""}</div>
+            ${sp.rounds.filter(x=>x.kommentar).length ? `<div class="eyebrow" style="margin-top:12px">Kommentatoren sa</div>`
+              + sp.rounds.map((x,i)=>x.kommentar
+                  ? `<div class="notatlinje"><b>Runde ${i+1}:</b> ${escapeHtml(x.kommentar)}</div>` : "").join("") : ""}
             <button class="link" data-slett="${sp.created}">Slett denne kampen</button>
           </div>` : ""}
       </div>`;
-    }).join("");
+      }).join("")
+    ).join("");
     app.innerHTML = varsel + `<div class="card">
       <div class="eyebrow">Historikk &middot; ${DATA.historikk.length} kamper</div>
       ${kamper}
-      <p class="muted center" style="margin-top:10px">Trykk på en kamp for å se poengutviklingen.</p>
+      <p class="muted center" style="margin-top:10px">Trykk på en kamp for å se poengutviklingen og kveldsnotatet.</p>
     </div>`;
   }
 
@@ -1305,6 +1392,21 @@ function datoTekst(ms){
   const d = new Date(ms);
   const md = ["jan","feb","mar","apr","mai","jun","jul","aug","sep","okt","nov","des"];
   return d.getDate() + ". " + md[d.getMonth()] + " " + d.getFullYear();
+}
+function klokkeTekst(ms){
+  const d = new Date(ms);
+  return (d.getHours()<10?"0":"") + d.getHours() + ":" + (d.getMinutes()<10?"0":"") + d.getMinutes();
+}
+/* Historikken leses som en kalender: kamper spilt samme kveld hører sammen. */
+function grupperPaaDato(kamper){
+  const ut = [];
+  kamper.forEach(sp=>{
+    const dato = datoTekst(sp.avsluttet || sp.created);
+    const siste = ut[ut.length-1];
+    if(siste && siste.dato === dato) siste.kamper.push(sp);
+    else ut.push({dato, kamper:[sp]});
+  });
+  return ut;
 }
 
 /* ---------- oppstart ---------- */

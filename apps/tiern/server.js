@@ -50,6 +50,8 @@ function tomState() {
     // {signatur, linjer:[{navn,linje}], laget} - signaturen er et avtrykk av
     // tallene, saa vi vet naar kommentarene er utdaterte
     karakterbok: null,
+    // siste forkastede kamp, slik at et feiltrykk kan angres
+    forkastet: null,
     versjon: 0
   };
 }
@@ -418,8 +420,24 @@ const tjener = http.createServer(async (req, res) => {
       return svar(res, 200, state);
     }
 
+    /* Forkasting legger kampen til side i stedet for å slette den, slik at et
+       feiltrykk kan angres. Bare den siste beholdes. */
     if (sti === '/api/forkast') {
-      state.aktivtSpill = null;
+      if (state.aktivtSpill) {
+        state.forkastet = { spill: state.aktivtSpill, tid: Date.now() };
+        state.aktivtSpill = null;
+        lagre();
+      }
+      return svar(res, 200, state);
+    }
+
+    if (sti === '/api/angre-forkast') {
+      if (!state.forkastet) return svar(res, 404, { feil: 'Ingenting å angre' });
+      if (state.aktivtSpill) {
+        return svar(res, 409, { feil: 'En annen kamp er startet i mellomtiden' });
+      }
+      state.aktivtSpill = state.forkastet.spill;
+      state.forkastet = null;
       lagre();
       return svar(res, 200, state);
     }
