@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<meta name="theme-color" content="#E7E9E3">
+<meta name="theme-color" content="#2a6353">
 <title>10'ern</title>
 <link rel="icon" href="ikon.svg">
 <link rel="apple-touch-icon" href="ikon.svg">
@@ -12,39 +12,53 @@
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
+    /* --paper er den LYSE flata inni kortene (felt, steppere, chips).
+       Sjølve bordet er filten, som på kortspillsida. De to må holdes fra
+       hverandre, ellers blir inndatafeltene grønne inni de lyse kortene. */
     --paper:#E7E9E3; --surface:#FBFBF8; --ink:#1B241F; --ink-soft:#5B655D;
     --line:#D2D6CC; --red:#B23A2E; --green:#3F6B4C; --gold:#C0883A;
-    --shadow:0 1px 0 rgba(27,36,31,.06), 0 8px 24px -16px rgba(27,36,31,.4);
+    --filt:#1d4b3e; --filt-topp:#2a6353; --filt-bunn:#163a30; --paa-filt:#eef3f0;
+    --shadow:0 1px 0 rgba(27,36,31,.06), 0 10px 26px -16px rgba(0,0,0,.55);
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;padding:0}
   body{
-    background:var(--paper); color:var(--ink);
+    background:radial-gradient(120% 90% at 50% 0%, var(--filt-topp) 0%, var(--filt) 45%, var(--filt-bunn) 100%);
+    background-attachment:fixed;
+    color:var(--ink);
     font-family:Inter,system-ui,sans-serif; font-variant-numeric:tabular-nums;
     -webkit-font-smoothing:antialiased; line-height:1.4;
+    min-height:100vh;
   }
+  /* tekst som ligger rett på filten, ikke inni et kort */
+  .paafilt{color:rgba(238,243,240,.72);font-size:13px}
   .wrap{max-width:480px;margin:0 auto;min-height:100vh;padding:0 16px 130px}
   h1,h2,h3{font-family:"Bricolage Grotesque",sans-serif;margin:0;letter-spacing:-.02em}
 
   /* Fanene ligger på egen linje under logoen. Sto de ved siden av, ble de
      til sammen bredere enn en telefon og hele sida kunne dras sidelengs. */
+  /* Toppfeltet ligger klistret øverst. Filten er festet til vinduet
+     (background-attachment:fixed), så øvre kant av gradienten er alltid
+     synlig der: en flat --filt-topp smelter derfor sammen med bakgrunnen
+     uansett hvor langt ned du har rullet. */
   header.top{
-    position:sticky;top:0;z-index:20;background:var(--paper);
+    position:sticky;top:0;z-index:20;background:var(--filt-topp);
     padding:calc(12px + env(safe-area-inset-top)) 0 8px;margin-bottom:4px;
     display:flex;flex-direction:column;gap:9px;
-    border-bottom:1px solid var(--line);
+    border-bottom:1px solid rgba(238,243,240,.16);
   }
-  .brand{font-family:"Bricolage Grotesque";font-weight:800;font-size:26px;letter-spacing:-.03em;cursor:pointer}
-  .brand .suit{color:var(--red)}
+  .brand{font-family:"Bricolage Grotesque";font-weight:800;font-size:26px;letter-spacing:-.03em;
+    cursor:pointer;color:var(--paa-filt)}
+  .brand .suit{color:#e8867a}
   .topknapper{display:flex;gap:6px}
   .menu-btn{
     flex:1 1 0;min-width:0;
-    background:none;border:1px solid var(--line);border-radius:9px;
-    padding:9px 4px;font-size:12.5px;color:var(--ink-soft);font-weight:600;cursor:pointer;
+    background:none;border:1px solid rgba(238,243,240,.26);border-radius:9px;
+    padding:9px 4px;font-size:12.5px;color:rgba(238,243,240,.75);font-weight:600;cursor:pointer;
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   }
-  .menu-btn:active{background:var(--surface)}
-  .menu-btn.aktiv{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+  .menu-btn:active{background:rgba(238,243,240,.12)}
+  .menu-btn.aktiv{background:var(--surface);color:var(--ink);border-color:var(--surface)}
 
   .card{background:var(--surface);border:1px solid var(--line);border-radius:16px;
     box-shadow:var(--shadow);padding:16px;margin:14px 0}
@@ -70,7 +84,7 @@
 
   .primary{
     position:fixed;left:0;right:0;bottom:0;z-index:30;
-    background:linear-gradient(to top,var(--paper) 60%,transparent);
+    background:linear-gradient(to top,var(--filt-bunn) 60%,transparent);
     padding:14px 16px calc(14px + env(safe-area-inset-bottom));
   }
   .primary .inner{max-width:480px;margin:0 auto}
@@ -399,7 +413,7 @@ function tegnOppsett(varsel){
       <div class="dealer-pick">${dealerChips}</div>
     </div>` : ""}
 
-    <p class="muted center" style="margin:6px 4px">Rekka spilles 10 &rarr; 1 &rarr; 1 &rarr; 10. To blinde 1-kortsrunder i bunnen.</p>
+    <p class="center paafilt" style="margin:12px 4px">Rekka spilles 10 &rarr; 1 &rarr; 1 &rarr; 10. To blinde 1-kortsrunder i bunnen.</p>
   `;
 
   footer.innerHTML = `<div class="inner">
@@ -622,7 +636,7 @@ function tegnSammendrag(varsel){
       <div class="eyebrow">Sluttstatistikk</div>
       ${statRows}
     </div>
-    <p class="muted center" style="margin:6px 4px">Lagrer du kampen, havner den i historikken og teller med i statistikken.</p>
+    <p class="center paafilt" style="margin:12px 4px">Lagrer du kampen, havner den i historikken og teller med i statistikken.</p>
   `;
   footer.innerHTML = `<div class="inner" style="display:flex;gap:10px">
     <button class="btn lys" id="backPlay">Rediger runder</button>
@@ -825,7 +839,7 @@ function tegnDeltakere(varsel){
       </div>
       <button class="ghost-btn" id="leggTilFast">+ Legg til fast deltaker</button>
     </div>
-    <p class="muted center" style="margin:6px 4px">Sletter du en fast spiller, blir kamper og statistikk stående. De regnes på navn.</p>`;
+    <p class="center paafilt" style="margin:12px 4px">Sletter du en fast spiller, blir kamper og statistikk stående. De regnes på navn.</p>`;
 
   footer.innerHTML = `<div class="inner"><button class="btn lys" id="tilbake">Tilbake</button></div>`;
 
