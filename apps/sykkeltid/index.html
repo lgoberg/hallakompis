@@ -92,8 +92,10 @@ label.felt input, label.felt select, label.felt textarea{
 .banner.stopp{background:rgba(180,35,24,.12); color:var(--feil); border:1px solid var(--feil)}
 
 /* ---------------------------------------------------------- rutenettet */
-.rutenett{display:grid; grid-template-columns:repeat(10,1fr); gap:6px}
-@media (max-width:760px){ .rutenett{grid-template-columns:repeat(5,1fr)} }
+/* Kolonnetallet regnes ut fra skjermen, se rutenettKolonner(). Poenget er at
+   hele feltet skal være synlig uten å scrolle, både i stående og liggende
+   iPad. Scrolling koster tid akkurat når det haster mest. */
+.rutenett{display:grid; gap:6px}
 .rute{
   position:relative; overflow:hidden; border:2px solid var(--kant); border-radius:10px;
   background:var(--hvit); color:var(--tekst); padding:8px 3px 12px;
@@ -116,7 +118,12 @@ label.felt input, label.felt select, label.felt textarea{
 .rute.r-lilla{background:var(--lilla); border-color:var(--lilla); color:#fff}
 .rute.r-gronn{background:var(--gronn); border-color:var(--gronn); color:#fff; opacity:.75}
 .rute.r-dns,.rute.r-dnf{background:var(--bg); color:var(--svak); border-style:dashed}
-.rute.forfalt{box-shadow:0 0 0 3px var(--feil) inset}
+/* Forfalt er en opplysning, ikke en alarm: rytteren er mer enn to minutter
+   på overtid. Bekreft er derimot et krav om handling, og skal skrike. */
+/* Lys skillering mellom ruta og den røde, ellers forsvinner varselet mot de
+   oransje rutene. Bare fargede ruter kan bli forfalt, så ringen har alltid
+   noe å stå mot. */
+.rute.forfalt{box-shadow:0 0 0 2px var(--kort), 0 0 0 4px var(--feil)}
 .rute.bekreft{box-shadow:0 0 0 4px var(--varsel) inset}
 .rute:active{filter:brightness(.88)}
 
@@ -170,6 +177,15 @@ th,td{padding:8px 6px; border-bottom:1px solid var(--kant); text-align:left; ver
 th{font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:var(--svak); font-weight:700}
 td.tall,th.tall{text-align:right; font-variant-numeric:tabular-nums}
 tr.vinner td{background:rgba(18,120,74,.12)}
+/* På smal skjerm faller alder og rundetider ut av tabellen og legger seg som
+   en linje under navnet. Ellers havner avviket utenfor skjermen, og det er
+   nettopp tallet som avgjør resultatet. */
+.underlinje{display:none; font-size:12px; color:var(--svak); font-weight:400; font-variant-numeric:tabular-nums}
+@media (max-width:640px){
+  .kolBred{display:none}
+  .underlinje{display:block}
+  th,td{padding:8px 4px}
+}
 td input,td select{width:100%; padding:6px; border:1px solid var(--kant); border-radius:6px; background:var(--bg); font-size:15px}
 td input.nr{width:60px; text-align:center}
 td input.alder{width:56px; text-align:center}
@@ -482,7 +498,16 @@ function tegn(){
     sisteFaner = fanesignatur;
   }
 
-  el('toppNavn').textContent = minOkt ? (minOkt.navn + ' · ' + rolleNavn(minOkt.rolle)) : (l.navn || 'Godlia Rundt');
+  // På smal skjerm er rollen viktigere enn navnet: du må kunne se med ett blikk
+  // at du står på målposten. "Per · arr..." hjelper ingen.
+  if (minOkt){
+    var r = rolleNavn(minOkt.rolle);
+    el('toppNavn').textContent = window.innerWidth < 520
+      ? r.charAt(0).toUpperCase() + r.slice(1)
+      : minOkt.navn + ' · ' + r;
+  }else{
+    el('toppNavn').textContent = l.navn || 'Godlia Rundt';
+  }
 
   var s = el('toppStatus');
   if (koe.length){ s.className = 'status venter'; s.textContent = koe.length + ' i kø'; }
@@ -578,8 +603,9 @@ function htmlRutenett(l){
     + '</div>';
 
   if (banket.length){
-    h += '<div class="kort"><h2>Tider uten startnummer</h2>'
-      + '<p class="svak" style="font-size:13px;margin:0 0 8px">Velg en tid, og trykk deretter på rytteren den tilhører.</p>'
+    h += '<div class="kort" style="padding:10px 12px"><h2 style="margin-bottom:6px">'
+      + 'Tider uten startnummer <span class="svak" style="text-transform:none;letter-spacing:0;font-weight:400">'
+      + '· velg en, trykk så rytteren</span></h2>'
       + '<div class="banketListe">' + banket.map(function(p){
           // alderen fylles av tikk(), slik at rutenettet under ikke tegnes om
           return '<button class="banketChip ' + (p.id===valgtBanket?'valgt':'') + '" data-banket="' + esc(p.id) + '">'
@@ -592,7 +618,8 @@ function htmlRutenett(l){
       + '</div>';
   }
 
-  h += '<div class="kort"><div class="rutenett">'
+  h += '<div class="kort"><div class="rutenett" style="grid-template-columns:repeat('
+    + rutenettKolonner(l.deltakere.length, banket.length > 0) + ',1fr)">'
     + l.deltakere.slice().sort(function(a,b){ return a.nr - b.nr; }).map(function(d){
         var t = F.tilstandFor(l, d);
         var forventet = F.forventetNeste(l, d, median);
@@ -732,17 +759,22 @@ function htmlResultat(l){
       h += '<p class="tom">Ingen har fullført alle ' + antall + ' rundene ennå.</p>';
     }else{
       var kol = '';
-      for (var i=0;i<antall;i++) kol += '<th class="tall">Runde ' + (i+1) + '</th>';
+      for (var i=0;i<antall;i++) kol += '<th class="tall kolBred">Runde ' + (i+1) + '</th>';
       h += '<div class="tabellRam"><table><thead><tr><th class="tall">#</th><th class="tall">Nr</th><th>Navn</th>'
-        + '<th class="tall">Alder</th>' + kol + '<th class="tall">Avvik</th></tr></thead><tbody>'
+        + '<th class="tall kolBred">Alder</th>' + kol + '<th class="tall">Avvik</th></tr></thead><tbody>'
         + r.ferdige.map(function(x){
-            var celler = '';
-            for (var j=0;j<antall;j++) celler += '<td class="tall">' + F.varighet(x.runder[j]) + '</td>';
+            var celler = '', under = [];
+            for (var j=0;j<antall;j++){
+              celler += '<td class="tall kolBred">' + F.varighet(x.runder[j]) + '</td>';
+              under.push(F.varighet(x.runder[j]));
+            }
+            if (x.d.alder != null) under.unshift(x.d.alder + ' år');
             return '<tr class="' + (x.plass===1?'vinner':'') + '">'
               + '<td class="tall"><b>' + x.plass + '</b></td>'
               + '<td class="tall">' + x.d.nr + '</td>'
-              + '<td>' + esc(x.d.navn||'') + '</td>'
-              + '<td class="tall">' + (x.d.alder != null ? x.d.alder : '') + '</td>'
+              + '<td>' + esc(x.d.navn||'')
+                + '<span class="underlinje">' + under.join(' · ') + '</span></td>'
+              + '<td class="tall kolBred">' + (x.d.alder != null ? x.d.alder : '') + '</td>'
               + celler + '<td class="tall"><b>' + F.sekTekst(x.avvik) + ' s</b></td></tr>';
           }).join('') + '</tbody></table></div>';
     }
@@ -916,6 +948,22 @@ function htmlData(l){
 function fornavn(navn){
   var s = String(navn || '').trim();
   return s ? s.split(/\s+/)[0] : '';
+}
+
+/* Hvor mange kolonner rutenettet skal ha, slik at hele feltet får plass uten
+   å scrolle. Vi regner ut fra RADER, ikke fra kvadratiske celler: rutehøyden
+   er fast (tall + fornavn), så det er antall rader som avgjør om det går inn.
+   Gulvet på 58 px hindrer at ruta blir for liten for en finger, og på telefon
+   godtar vi heller scrolling enn ruter ingen treffer. */
+var RUTE_HOYDE = 73;   // rutehøyde inkludert luft mellom radene
+function rutenettKolonner(antall, harBanket){
+  if (antall < 2) return 1;
+  var bredde = Math.min(window.innerWidth, 1100) - 50;
+  var overSeg = 150 + (harBanket ? 88 : 0);      // toppfelt, faner, stripe, tider uten nummer
+  var rader = Math.max(1, Math.floor((window.innerHeight - overSeg - 16) / RUTE_HOYDE));
+  var k = Math.ceil(antall / rader);
+  var maksPaaBredden = Math.max(4, Math.floor(bredde / 58));
+  return Math.max(4, Math.min(k, maksPaaBredden, antall));
 }
 
 function kort(tittel, innhold){
@@ -1518,7 +1566,10 @@ function oppdaterLevende(){
     var andel = Math.max(0, Math.min(1, (naa - (forventet - RING_VINDU_MS)) / RING_VINDU_MS));
     var ring = ruter[i].firstElementChild ? ruter[i].querySelector('.rring') : null;
     if (ring) ring.style.width = (andel * 100).toFixed(0) + '%';
-    var forfalt = naa > forventet + 45000;
+    // To minutter, ikke tre kvarters minutt. En unge som prøver å treffe sin
+    // egen rundetid bommer lett med et halvt minutt, og et varsel som lyser
+    // hele tiden slutter folk å se.
+    var forfalt = naa > forventet + 120000;
     if (ruter[i].classList.contains('forfalt') !== forfalt) ruter[i].classList.toggle('forfalt', forfalt);
   }
   var aldre = document.querySelectorAll('[data-siden]');
@@ -1575,6 +1626,14 @@ document.addEventListener('visibilitychange', function(){
 
 window.addEventListener('beforeunload', function(ev){
   if (koe.length){ ev.preventDefault(); ev.returnValue = ''; }
+});
+
+/* Rutenettet regner kolonnetallet ut fra skjermflata, så en iPad som snus
+   må tegne på nytt. */
+var endreStorrelseTimer = null;
+window.addEventListener('resize', function(){
+  clearTimeout(endreStorrelseTimer);
+  endreStorrelseTimer = setTimeout(function(){ sisteHtml = null; tegn(); }, 150);
 });
 
 lastLokalt();

@@ -41,9 +41,14 @@ h2{font-size:2.6vh; font-weight:700; color:#93a1b2; margin-bottom:1.4vh; text-tr
 /* rutenett */
 #rutenett{display:grid; gap:.7vh; height:100%}
 .rute{
-  border-radius:.8vh; display:flex; align-items:center; justify-content:center;
-  font-weight:800; font-variant-numeric:tabular-nums; position:relative;
+  border-radius:.8vh; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  font-weight:800; font-variant-numeric:tabular-nums; position:relative; overflow:hidden;
   background:#e8edf3; color:#0c1016; border:2px solid #e8edf3;
+}
+/* Fornavnet gjør at folk finner sin egen unge på skjermen. */
+.rute .rnavn{
+  font-weight:600; opacity:.85; margin-top:.2vh; max-width:92%;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
 .rute.r-oransje{background:#e07000; border-color:#e07000; color:#fff}
 .rute.r-lilla{background:#7141c8; border-color:#7141c8; color:#fff}
@@ -178,8 +183,14 @@ function tegn(){
       var merke = t.kode === 'gronn' ? '✓'
         : t.kode === 'dns' ? 'DNS' : t.kode === 'dnf' ? 'DNF'
         : (t.kode === 'oransje' || t.kode === 'lilla') ? 'R' + t.paaRunde : '';
+      var fornavn = String(d.navn || '').trim().split(/\s+/)[0] || '';
+      // navnet vises bare når ruta er stor nok til at det blir lesbart
+      var navnSkrift = skrift * 0.34;
       html += '<div class="rute r-' + t.kode + '" style="font-size:' + skrift.toFixed(1) + 'vh">'
-        + d.nr + (merke ? '<span class="merke">' + merke + '</span>' : '') + '</div>';
+        + '<span>' + d.nr + '</span>'
+        + (fornavn && navnSkrift >= 1.1
+            ? '<span class="rnavn" style="font-size:' + navnSkrift.toFixed(1) + 'vh">' + esc(fornavn) + '</span>' : '')
+        + (merke ? '<span class="merke">' + merke + '</span>' : '') + '</div>';
     });
     boks.innerHTML = html + '</div>';
     return;
