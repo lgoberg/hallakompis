@@ -1,0 +1,11 @@
+{
+  "name": "@hallakompis/sykkeltid",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Tidtaking for sykkelløp på idealtid",
+  "type": "commonjs",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js"
+  }
+}

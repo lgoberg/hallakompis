@@ -27,3 +27,10 @@ pnpm-debug.log*
 # drizzle
 drizzle/meta/_journal.json.bak
 .env.save
+
+# tidtakingsappen: loepsdata er runtime
+apps/sykkeltid/data/
+
+# Claude Code: ignorer lokale filer, men behold sporet .claude/launch.json
+.claude/worktrees/
+.claude/settings.local.json

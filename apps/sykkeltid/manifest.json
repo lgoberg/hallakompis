@@ -1,0 +1,14 @@
+{
+  "name": "Idealtid - tidtaking",
+  "short_name": "Idealtid",
+  "description": "Tidtaking for sykkelløp på idealtid",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#eef1f5",
+  "theme_color": "#0b6bcb",
+  "icons": [
+    { "src": "ikon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

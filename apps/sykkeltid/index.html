@@ -1,0 +1,1439 @@
+<!doctype html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b6bcb">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Godlia Rundt - tidtaking</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="ikon.svg">
+<link rel="apple-touch-icon" href="ikon.svg">
+<style>
+:root{
+  --bg:#eef1f5; --kort:#ffffff; --tekst:#101418; --svak:#5b6472; --kant:#d6dce4;
+  --aksent:#0b6bcb; --aksentTekst:#ffffff; --ok:#0a7c4a; --varsel:#a4620a; --feil:#b42318;
+  --hvit:#ffffff; --oransje:#e07000; --lilla:#7141c8; --gronn:#12784a;
+  --rund:12px; --skygge:0 1px 2px rgba(16,20,24,.08), 0 4px 12px rgba(16,20,24,.06);
+}
+body.natt{
+  --bg:#0d1117; --kort:#161b22; --tekst:#e6edf3; --svak:#9aa7b4; --kant:#2b323b;
+  --aksent:#2f81f7; --ok:#3fb950; --varsel:#d29922; --feil:#f85149;
+  --hvit:#20262e; --oransje:#c96608; --lilla:#7b52cf; --gronn:#1a8a56;
+  --skygge:0 1px 2px rgba(0,0,0,.4);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg); color:var(--tekst);
+  font:16px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  -webkit-text-size-adjust:100%; touch-action:manipulation;
+  padding-bottom:calc(84px + env(safe-area-inset-bottom));
+}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+
+header{
+  position:sticky; top:0; z-index:20; background:var(--kort);
+  border-bottom:1px solid var(--kant);
+  padding:calc(6px + env(safe-area-inset-top)) 12px 6px;
+  display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+}
+header .navn{font-weight:700; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:40vw}
+header .klokke{font-variant-numeric:tabular-nums; font-weight:700; font-size:19px; margin-left:auto}
+.status{font-size:12px; font-weight:700; padding:3px 9px; border-radius:999px; border:1px solid var(--kant); white-space:nowrap}
+.status.pa{color:var(--ok); border-color:var(--ok)}
+.status.venter{color:var(--varsel); border-color:var(--varsel)}
+.status.av{color:#fff; background:var(--feil); border-color:var(--feil)}
+
+nav{
+  position:sticky; top:0; z-index:19; display:flex; gap:4px; overflow-x:auto;
+  background:var(--kort); border-bottom:1px solid var(--kant); padding:6px 8px; scrollbar-width:none;
+}
+nav::-webkit-scrollbar{display:none}
+nav button{border:1px solid transparent; background:transparent; color:var(--svak); padding:8px 12px; border-radius:999px; font-weight:600; font-size:14px; white-space:nowrap}
+nav button.aktiv{background:var(--aksent); color:var(--aksentTekst)}
+main{padding:12px; max-width:1100px; margin:0 auto}
+
+.kort{background:var(--kort); border:1px solid var(--kant); border-radius:var(--rund); padding:12px; margin-bottom:12px; box-shadow:var(--skygge)}
+.kort h2{margin:0 0 10px; font-size:14px; text-transform:uppercase; letter-spacing:.04em; color:var(--svak)}
+.rad{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+.rad.mellom{justify-content:space-between}
+label.felt{display:block; margin-bottom:10px; font-size:13px; color:var(--svak); font-weight:600}
+label.felt input, label.felt select, label.felt textarea{
+  display:block; width:100%; margin-top:4px; padding:10px; border:1px solid var(--kant);
+  border-radius:8px; background:var(--bg); font-weight:400; color:var(--tekst); font-size:16px;
+}
+.knapp{border:1px solid var(--kant); background:var(--kort); color:var(--tekst); padding:10px 14px; border-radius:10px; font-weight:600}
+.knapp.primar{background:var(--aksent); border-color:var(--aksent); color:var(--aksentTekst)}
+.knapp.fare{color:var(--feil); border-color:var(--feil)}
+.knapp:disabled{opacity:.4}
+.mini{font-size:13px; padding:6px 10px; border-radius:8px}
+.svak{color:var(--svak)}
+.tall{font-variant-numeric:tabular-nums}
+.stripe{display:flex; gap:14px; flex-wrap:wrap; font-size:13px; color:var(--svak); margin-bottom:10px}
+.stripe b{color:var(--tekst); font-size:16px; font-variant-numeric:tabular-nums}
+.tom{color:var(--svak); font-style:italic; padding:8px 0}
+.banner{border-radius:10px; padding:10px 12px; margin-bottom:12px; font-size:14px; font-weight:600}
+.banner.advarsel{background:rgba(164,98,10,.14); color:var(--varsel); border:1px solid var(--varsel)}
+.banner.stopp{background:rgba(180,35,24,.12); color:var(--feil); border:1px solid var(--feil)}
+
+/* ---------------------------------------------------------- rutenettet */
+.rutenett{display:grid; grid-template-columns:repeat(10,1fr); gap:6px}
+@media (max-width:760px){ .rutenett{grid-template-columns:repeat(5,1fr)} }
+.rute{
+  position:relative; overflow:hidden; border:2px solid var(--kant); border-radius:10px;
+  background:var(--hvit); color:var(--tekst); padding:10px 4px 12px;
+  font-size:26px; font-weight:800; font-variant-numeric:tabular-nums; line-height:1.1;
+  user-select:none; -webkit-user-select:none; -webkit-touch-callout:none;
+}
+.rute .rmerke{
+  position:absolute; top:3px; right:5px; font-size:10px; font-weight:800;
+  letter-spacing:.03em; opacity:.9;
+}
+.rute .rring{position:absolute; left:0; bottom:0; height:5px; background:rgba(255,255,255,.85)}
+.rute.r-hvit .rring{background:rgba(11,107,203,.5)}
+.rute.r-oransje{background:var(--oransje); border-color:var(--oransje); color:#fff}
+.rute.r-lilla{background:var(--lilla); border-color:var(--lilla); color:#fff}
+.rute.r-gronn{background:var(--gronn); border-color:var(--gronn); color:#fff; opacity:.75}
+.rute.r-dns,.rute.r-dnf{background:var(--bg); color:var(--svak); border-style:dashed}
+.rute.forfalt{box-shadow:0 0 0 3px var(--feil) inset}
+.rute.bekreft{box-shadow:0 0 0 4px var(--varsel) inset}
+.rute:active{filter:brightness(.88)}
+
+.banketListe{display:flex; gap:8px; overflow-x:auto; padding:4px 0}
+.banketChip{border:2px solid var(--kant); background:var(--kort); border-radius:10px; padding:8px 12px; min-width:104px; flex:0 0 auto; text-align:left}
+.banketChip.valgt{border-color:var(--aksent); background:rgba(11,107,203,.12)}
+.banketChip .tid{font-weight:700; font-variant-numeric:tabular-nums}
+.banketChip .alder{font-size:12px; color:var(--svak)}
+
+#ukjentKnapp{width:100%; padding:14px; font-size:17px; font-weight:700; border-radius:12px; border:2px dashed var(--kant); background:var(--kort); color:var(--svak)}
+
+/* ------------------------------------------------------------ kvittering */
+#kvittering{
+  position:fixed; left:0; right:0; bottom:0; z-index:40;
+  background:var(--tekst); color:var(--bg);
+  padding:12px 14px calc(12px + env(safe-area-inset-bottom));
+  display:flex; align-items:center; gap:12px; box-shadow:0 -4px 20px rgba(0,0,0,.25);
+}
+#kvittering.skjult{display:none}
+#kvittering.feil{background:var(--feil); color:#fff}
+#kvittering .kvTekst{flex:1; min-width:0; font-size:16px; font-weight:700}
+#kvittering .kvTekst small{display:block; font-weight:500; opacity:.85; font-size:13px}
+#kvittering button{background:transparent; border:2px solid currentColor; color:inherit; padding:8px 14px; border-radius:10px; font-weight:700}
+
+/* --------------------------------------------------------------- panel */
+#panel{position:fixed; inset:0; z-index:50; background:rgba(0,0,0,.45); display:flex; align-items:flex-end; justify-content:center}
+#panel.skjult{display:none}
+#panel .innhold{background:var(--kort); width:100%; max-width:520px; border-radius:16px 16px 0 0; padding:16px; padding-bottom:calc(16px + env(safe-area-inset-bottom))}
+#panel h3{margin:0 0 4px; font-size:22px}
+
+/* ------------------------------------------------------------ startliste */
+.sokefelt{width:100%; padding:12px; border:1px solid var(--kant); border-radius:10px; background:var(--bg); font-size:16px; margin-bottom:10px}
+.startrad{
+  display:flex; align-items:center; gap:12px; width:100%; text-align:left;
+  border:1px solid var(--kant); background:var(--kort); border-radius:12px;
+  padding:12px; margin-bottom:8px; min-height:64px;
+}
+.startrad .snr{font-size:24px; font-weight:800; font-variant-numeric:tabular-nums; min-width:56px; text-align:center; background:var(--bg); border-radius:8px; padding:8px 4px}
+.startrad .snavn{flex:1; min-width:0; font-weight:600; overflow:hidden; text-overflow:ellipsis}
+.startrad .smeta{display:block; font-size:12px; color:var(--svak); font-weight:400}
+.startrad .sknapp{background:var(--gronn); color:#fff; font-weight:800; padding:10px 16px; border-radius:10px; font-size:15px}
+.startrad:active{filter:brightness(.94)}
+#sidenStart{font-size:44px; font-weight:800; font-variant-numeric:tabular-nums; line-height:1}
+#sidenStart.klar{color:var(--ok)}
+.sistrad{display:flex; gap:10px; align-items:center; padding:8px 0; border-bottom:1px solid var(--kant); font-size:14px}
+.sistrad .nr{font-weight:700; min-width:42px; font-variant-numeric:tabular-nums}
+.sistrad .tid{margin-left:auto; font-variant-numeric:tabular-nums; color:var(--svak)}
+
+table{width:100%; border-collapse:collapse; font-size:14px}
+th,td{padding:8px 6px; border-bottom:1px solid var(--kant); text-align:left; vertical-align:middle}
+th{font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:var(--svak); font-weight:700}
+td.tall,th.tall{text-align:right; font-variant-numeric:tabular-nums}
+tr.vinner td{background:rgba(18,120,74,.12)}
+td input,td select{width:100%; padding:6px; border:1px solid var(--kant); border-radius:6px; background:var(--bg); font-size:15px}
+td input.nr{width:60px; text-align:center}
+td input.alder{width:56px; text-align:center}
+.tabellRam{overflow-x:auto}
+
+.velger{display:flex; gap:6px; flex-wrap:wrap}
+.velger button{border:2px solid var(--kant); background:var(--kort); border-radius:10px; padding:8px 14px; font-weight:700; font-size:14px}
+.velger button.valgt{border-color:var(--aksent); color:var(--aksent)}
+
+.merke{font-size:11px; font-weight:700; padding:2px 6px; border-radius:999px; background:var(--bg); color:var(--svak); border:1px solid var(--kant)}
+.merke.ok{color:var(--ok); border-color:var(--ok)}
+.merke.feil{color:var(--feil); border-color:var(--feil)}
+.merke.varsel{color:var(--varsel); border-color:var(--varsel)}
+
+@media print{
+  header,nav,.ikkePrint,#kvittering,#panel{display:none !important}
+  body{background:#fff; padding-bottom:0}
+  .kort{box-shadow:none; border:none; padding:0; margin-bottom:18px}
+  main{max-width:none}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <span class="navn" id="toppNavn">Godlia Rundt</span>
+  <span class="status" id="toppStatus">kobler til</span>
+  <span class="klokke tall" id="toppKlokke">--:--:--</span>
+  <button class="knapp mini" data-handling="angre" id="angreKnapp">Angre</button>
+</header>
+
+<nav id="faner"></nav>
+<main id="innhold"></main>
+
+<div id="kvittering" class="skjult">
+  <span class="kvTekst" id="kvTekst"></span>
+  <button data-handling="angre">Angre</button>
+</div>
+
+<div id="panel" class="skjult"><div class="innhold" id="panelInnhold"></div></div>
+
+<script src="felles.js"></script>
+<script>
+(function(){
+"use strict";
+
+var F = window.Felles;
+
+/* =========================================================================
+   Tid
+   Vi anker mot performance.now() slik at tidsstempler blir monotone selv om
+   telefonen justerer klokka, og legger paa et maalt avvik mot serveren slik
+   at startposten og maalposten stempler paa samme tidslinje.
+   ========================================================================= */
+var ANKER_VEGG = Date.now();
+var ANKER_PERF = performance.now();
+var TID_AVVIK = 0;
+var SYNK = null;
+
+function lokalNa(){ return ANKER_VEGG + (performance.now() - ANKER_PERF); }
+function na(){ return Math.round(lokalNa() + TID_AVVIK); }
+
+function synkKlokke(){
+  var proev = 0, beste = null;
+  function ett(){
+    var t0 = lokalNa();
+    hent('api/tid').then(function(d){
+      var t1 = lokalNa();
+      var rtt = t1 - t0;
+      var avvik = d.t + rtt/2 - t1;   // Cristian
+      if (!beste || rtt < beste.rtt) beste = { rtt: rtt, avvik: avvik };
+      if (++proev < 5) setTimeout(ett, 130);
+      else { TID_AVVIK = Math.round(beste.avvik); SYNK = { rtt: Math.round(beste.rtt) }; tegn(); }
+    }).catch(function(){ if (++proev < 5) setTimeout(ett, 600); });
+  }
+  ett();
+}
+
+/* =========================================================================
+   Tilstand
+   ========================================================================= */
+var LAGER_TILSTAND = 'sykkeltid.tilstand.v3';
+var LAGER_FANE = 'sykkeltid.fane.v3';
+var LAGER_NATT = 'sykkeltid.natt.v3';
+
+var profil = 'gjest';
+try{
+  profil = sessionStorage.getItem('sykkeltid.profil') || localStorage.getItem('sykkeltid.sisteProfil') || 'gjest';
+}catch(e){}
+
+function settProfil(p){
+  profil = p;
+  try{
+    sessionStorage.setItem('sykkeltid.profil', p);
+    localStorage.setItem('sykkeltid.sisteProfil', p);
+  }catch(e){}
+}
+function nokkelKoe(){ return 'sykkeltid.koe.v3.' + profil; }
+function nokkelOkt(){ return 'sykkeltid.okt.v3.' + profil; }
+
+var tjenerLop = null;
+var koe = [];
+var token = null, minOkt = null;
+var tilkoblet = false, sender = false;
+var revisjon = 0, visCache = null, visCacheRev = -1;
+
+function lastLokalt(){
+  try{
+    var t = localStorage.getItem(LAGER_TILSTAND);
+    if (t) tjenerLop = JSON.parse(t);
+    var k = localStorage.getItem(nokkelKoe());
+    if (k) koe = JSON.parse(k) || [];
+    var o = localStorage.getItem(nokkelOkt());
+    if (o){ o = JSON.parse(o); token = o.token; minOkt = o.okt; }
+  }catch(e){}
+  if (!tjenerLop) tjenerLop = F.nyttLop();
+}
+
+function lagreLokalt(){
+  try{
+    localStorage.setItem(LAGER_TILSTAND, JSON.stringify(tjenerLop));
+    localStorage.setItem(nokkelKoe(), JSON.stringify(koe));
+  }catch(e){}
+}
+
+/* Visningstilstanden: serverens løp med egne usendte hendelser lagt oppå.
+   Samme regelmotor som serveren, så det du ser er det som blir. */
+function lop(){
+  if (visCacheRev === revisjon && visCache) return visCache;
+  var k = JSON.parse(JSON.stringify(tjenerLop));
+  koe.forEach(function(h){ try{ F.brukHendelse(k, h); }catch(e){} });
+  visCache = k; visCacheRev = revisjon;
+  return k;
+}
+function endret(){ revisjon++; }
+
+function hent(sti, valg){
+  return fetch(sti, valg || { cache:'no-store' }).then(function(r){
+    if (!r.ok) throw new Error('http ' + r.status);
+    return r.json();
+  });
+}
+
+function lagHid(){
+  return (minOkt && minOkt.rolle ? minOkt.rolle[0] : 'x')
+    + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+var angreStabel = [];
+
+function send(h, angreTekst, angreHendelse){
+  h.hid = lagHid();
+  h.opprettet = na();
+  h.av = (minOkt && minOkt.navn) || '';
+  koe.push(h);
+  endret();
+  if (angreTekst) angreStabel.push({ tekst: angreTekst, hendelse: angreHendelse });
+  if (angreStabel.length > 40) angreStabel.shift();
+  lagreLokalt();
+  tegn();
+  tomKoe();
+}
+
+function tomKoe(){
+  if (sender || !koe.length || !token) return;
+  sender = true;
+  var pakke = koe.slice(0, 60);
+  fetch('api/hendelser', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-okt': token },
+    body: JSON.stringify({ hendelser: pakke })
+  }).then(function(r){
+    if (r.status === 401){
+      token = null; minOkt = null;
+      try{ localStorage.removeItem(nokkelOkt()); }catch(e){}
+      throw new Error('utlogget');
+    }
+    if (!r.ok) throw new Error('http ' + r.status);
+    return r.json();
+  }).then(function(d){
+    var brukte = {};
+    (d.brukte || []).forEach(function(id){ brukte[id] = 1; });
+    koe = koe.filter(function(h){ return !brukte[h.hid]; });
+    tilkoblet = true;
+    endret(); lagreLokalt();
+    if (!stromApen) friskOppTilstand();
+  }).catch(function(){
+    tilkoblet = false;
+  }).then(function(){
+    sender = false;
+    tegn();
+    if (koe.length) setTimeout(tomKoe, 1500);
+  });
+}
+
+function friskOppTilstand(){
+  return hent('api/tilstand').then(function(d){
+    if (d && d.lop){ tjenerLop = d.lop; tilkoblet = true; endret(); lagreLokalt(); tegn(); }
+  }).catch(function(){ tilkoblet = false; tegn(); });
+}
+
+var strom = null, stromApen = false;
+function koble(){
+  if (!window.EventSource){ setInterval(friskOppTilstand, 4000); return; }
+  try{ strom = new EventSource('api/strom'); }catch(e){ return; }
+  strom.onopen = function(){ stromApen = true; tilkoblet = true; tegn(); };
+  strom.onmessage = function(ev){
+    try{
+      var d = JSON.parse(ev.data);
+      if (d.type === 'tilstand' && d.lop){ tjenerLop = d.lop; endret(); lagreLokalt(); tegn(); }
+    }catch(e){}
+  };
+  strom.onerror = function(){ stromApen = false; tilkoblet = false; tegn(); setTimeout(tomKoe, 2000); };
+}
+
+/* Angre sender en motsatt hendelse, slik at begge postene ser det samme. */
+function angre(){
+  var siste = angreStabel.pop();
+  if (!siste){ varsle('Ingenting å angre.'); return; }
+  var h = siste.hendelse;
+  h.hid = lagHid(); h.opprettet = na(); h.av = (minOkt && minOkt.navn) || '';
+  koe.push(h);
+  endret(); lagreLokalt(); skjulKvittering(); tegn(); tomKoe();
+  varsle('Angret: ' + siste.tekst);
+}
+
+/* =========================================================================
+   Visning
+   ========================================================================= */
+var ALLE_FANER = {
+  rutenett: 'Tidtaking', start: 'Start', resultat: 'Resultat',
+  deltakere: 'Deltakere', oppsett: 'Oppsett', data: 'Data', logginn: 'Logg inn'
+};
+
+/* Rollen bestemmer hvilken operativ flate du faar. Startposten skal ikke ha
+   rutenettet liggende, og maalposten skal ikke kunne sende ryttere ut. */
+function mineFaner(){
+  var r = minOkt && minOkt.rolle;
+  if (!token) return ['resultat','logginn'];
+  if (r === 'start') return ['start','resultat','deltakere','oppsett','data'];
+  if (r === 'mal') return ['rutenett','resultat','deltakere','oppsett','data'];
+  return ['rutenett','start','resultat','deltakere','oppsett','data'];
+}
+
+var aktivFane = 'resultat';
+var valgtRolle = 'mal';
+var valgtBanket = null;
+var bekreftNr = null, bekreftFrist = 0;
+var sokTekst = '';
+var gruppering = 'sammenlagt';
+var sisteHtml = null;
+
+var DOBBEL_SPERRE_MS = 60000;   // ingen kan passere to ganger på ett minutt
+var RING_VINDU_MS = 60000;      // hvor lenge før forventet ankomst ringen fylles
+
+function el(id){ return document.getElementById(id); }
+function esc(s){
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function varsle(tekst){
+  var b = document.createElement('div');
+  b.textContent = tekst;
+  b.style.cssText = 'position:fixed;left:50%;top:80px;transform:translateX(-50%);background:#101418;color:#fff;'
+    + 'padding:10px 16px;border-radius:999px;z-index:99;font-size:14px;max-width:90vw;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,.3)';
+  document.body.appendChild(b);
+  setTimeout(function(){ b.remove(); }, 2800);
+}
+
+function blink(){
+  document.body.style.filter = 'brightness(1.25)';
+  setTimeout(function(){ document.body.style.filter = ''; }, 80);
+  if (navigator.vibrate){ try{ navigator.vibrate(30); }catch(e){} }
+}
+
+var kvitteringTimer = null;
+function visKvittering(tekst, undertekst, erFeil){
+  el('kvTekst').innerHTML = esc(tekst) + (undertekst ? '<small>' + esc(undertekst) + '</small>' : '');
+  var k = el('kvittering');
+  k.className = erFeil ? 'feil' : '';
+  clearTimeout(kvitteringTimer);
+  kvitteringTimer = setTimeout(skjulKvittering, erFeil ? 9000 : 5000);
+}
+function skjulKvittering(){ el('kvittering').className = 'skjult'; }
+
+function tegn(){
+  var l = lop();
+  var faner = mineFaner();
+  if (faner.indexOf(aktivFane) < 0) aktivFane = faner[0];
+
+  el('faner').innerHTML = faner.map(function(id){
+    return '<button data-fane="' + id + '" class="' + (id===aktivFane?'aktiv':'') + '">' + ALLE_FANER[id] + '</button>';
+  }).join('');
+
+  el('toppNavn').textContent = minOkt ? (minOkt.navn + ' · ' + rolleNavn(minOkt.rolle)) : (l.navn || 'Godlia Rundt');
+
+  var s = el('toppStatus');
+  if (koe.length){ s.className = 'status venter'; s.textContent = koe.length + ' i kø'; }
+  else if (tilkoblet){ s.className = 'status pa'; s.textContent = 'på nett'; }
+  else { s.className = 'status av'; s.textContent = 'frakoblet'; }
+
+  el('angreKnapp').disabled = !angreStabel.length;
+
+  var innhold = '';
+  if (!token && aktivFane !== 'resultat') innhold = htmlLoggInn();
+  else if (aktivFane === 'logginn') innhold = htmlLoggInn();
+  else if (aktivFane === 'rutenett') innhold = htmlRutenett(l);
+  else if (aktivFane === 'start') innhold = htmlStart(l);
+  else if (aktivFane === 'resultat') innhold = htmlResultat(l);
+  else if (aktivFane === 'deltakere') innhold = htmlDeltakere(l);
+  else if (aktivFane === 'oppsett') innhold = htmlOppsett(l);
+  else if (aktivFane === 'data') innhold = htmlData(l);
+
+  // Rutenettet tegnes fire ganger i sekundet for at ringene skal leve. Bytter
+  // vi ut innholdet når ingenting er endret, mister vi rulling og trykk som er
+  // halvveis inne. Derfor: bare skriv når teksten faktisk er en annen.
+  var ny = advarsler() + innhold;
+  if (ny !== sisteHtml){ el('innhold').innerHTML = ny; sisteHtml = ny; }
+}
+
+function rolleNavn(r){
+  return r === 'start' ? 'startpost' : r === 'mal' ? 'målpost' : 'arrangør';
+}
+
+function advarsler(){
+  if (aktivFane === 'logginn') return '';
+  var ut = '';
+  if (!token && aktivFane === 'resultat'){
+    ut += '<div class="banner advarsel ikkePrint">Du ser på resultatene. '
+      + '<button class="knapp mini" data-handling="tilLogginn">Logg inn som post</button></div>';
+  }
+  if (token && !SYNK){
+    ut += '<div class="banner stopp ikkePrint">Klokka er ikke stilt mot serveren ennå. '
+      + 'Tidene kan bli feil hvis postene har ulik klokke. '
+      + '<button class="knapp mini" data-handling="synk">Prøv igjen</button></div>';
+  }
+  if (koe.length > 8){
+    ut += '<div class="banner advarsel ikkePrint">' + koe.length + ' registreringer venter på nett. '
+      + 'De er lagret her og sendes automatisk. Fortsett som normalt.</div>';
+  }
+  return ut;
+}
+
+/* ------------------------------------------------------------- innlogging */
+function htmlLoggInn(){
+  return '<div class="kort"><h2>Logg inn</h2>'
+    + '<p class="svak" style="font-size:14px">Begge postene logger inn på samme løp. '
+    + 'Velg hvilken post du bemanner.</p>'
+    + '<label class="felt">Navn eller post<input id="innNavn" placeholder="For eksempel Kari, startpost" autocomplete="off"></label>'
+    + '<label class="felt">Kode<input id="innKode" type="password" autocomplete="off"></label>'
+    + '<div class="velger" style="margin-bottom:12px">'
+    + '<button data-rolle="start">Startpost</button>'
+    + '<button data-rolle="mal" class="valgt">Målpost</button>'
+    + '<button data-rolle="arrangor">Arrangør</button></div>'
+    + '<button class="knapp primar" data-handling="loggInn" style="width:100%">Logg inn</button></div>';
+}
+
+/* -------------------------------------------------------------- rutenettet */
+function htmlRutenett(l){
+  if (!l.deltakere.length){
+    return kort('Ingen deltakere ennå',
+      '<p class="svak">Startlista må legges inn før tidtakinga kan begynne.</p>'
+      + '<button class="knapp primar" data-fane="deltakere">Gå til Deltakere</button>');
+  }
+
+  var naa = na();
+  var median = F.medianRunde(l);
+  var banket = F.utildelte(l);
+  var behov = F.passeringsBehov(l);
+
+  var ute = 0, ferdige = 0, ikkeStartet = 0;
+  l.deltakere.forEach(function(d){
+    var t = F.tilstandFor(l, d);
+    if (t.kode === 'gronn') ferdige++;
+    else if (t.kode === 'oransje' || t.kode === 'lilla') ute++;
+    else if (t.kode === 'hvit') ikkeStartet++;
+  });
+
+  var h = '';
+  h += '<div class="stripe">'
+    + '<span>Ikke startet <b>' + ikkeStartet + '</b></span>'
+    + '<span>Ute på løypa <b>' + ute + '</b></span>'
+    + '<span>I mål <b>' + ferdige + '</b></span>'
+    + (banket.length ? '<span>Uten nummer <b>' + banket.length + '</b></span>' : '')
+    + '</div>';
+
+  if (banket.length){
+    h += '<div class="kort"><h2>Tider uten startnummer</h2>'
+      + '<p class="svak" style="font-size:13px;margin:0 0 8px">Velg en tid, og trykk deretter på rytteren den tilhører.</p>'
+      + '<div class="banketListe">' + banket.map(function(p){
+          return '<button class="banketChip ' + (p.id===valgtBanket?'valgt':'') + '" data-banket="' + esc(p.id) + '">'
+            + '<div class="tid">' + F.klokkeslett(p.tid, true) + '</div>'
+            + '<div class="alder">' + Math.max(0, Math.round((naa-p.tid)/1000)) + ' s siden</div></button>';
+        }).join('') + '</div>'
+      + (valgtBanket ? '<div class="rad" style="margin-top:8px">'
+          + '<button class="knapp mini" data-handling="velgBortBanket">Avbryt valg</button>'
+          + '<button class="knapp mini fare" data-handling="slettBanket">Slett tiden</button></div>' : '')
+      + '</div>';
+  }
+
+  h += '<div class="kort"><div class="rutenett">'
+    + l.deltakere.slice().sort(function(a,b){ return a.nr - b.nr; }).map(function(d){
+        var t = F.tilstandFor(l, d);
+        var forventet = F.forventetNeste(l, d, median);
+        var ring = 0, forfalt = false;
+        if (forventet != null){
+          ring = Math.max(0, Math.min(1, (naa - (forventet - RING_VINDU_MS)) / RING_VINDU_MS)) * 100;
+          forfalt = naa > forventet + 45000;
+        }
+        var merke = t.kode === 'gronn' ? '✓'
+          : t.kode === 'dns' ? 'DNS' : t.kode === 'dnf' ? 'DNF'
+          : (t.kode === 'oransje' || t.kode === 'lilla') ? 'R' + t.paaRunde : '';
+        return '<button class="rute r-' + t.kode + (forfalt?' forfalt':'') + (bekreftNr===d.nr?' bekreft':'') + '"'
+          + ' data-rute="' + d.nr + '" aria-label="' + esc(d.nr + ' ' + (d.navn||'')) + '">'
+          + d.nr
+          + (merke ? '<span class="rmerke">' + merke + '</span>' : '')
+          + (ring > 0 ? '<span class="rring" style="width:' + ring.toFixed(0) + '%"></span>' : '')
+          + '</button>';
+      }).join('')
+    + '</div></div>';
+
+  h += '<button id="ukjentKnapp" data-handling="ukjent">Rakk ikke å lese nummeret, ta tiden nå</button>';
+
+  h += '<div class="kort" style="margin-top:12px"><h2>Forklaring</h2>'
+    + '<p class="svak" style="font-size:13px;margin:0">Hvit betyr ikke startet. Oransje er ute på runde 1 (R1), '
+    + 'lilla er ute på siste runde (R' + l.antallRunder + '), grønn er i mål. Ett trykk flytter rytteren ett hakk. '
+    + 'Den fylte streken nederst i ruta viser at rytteren nærmer seg forventet ankomst. '
+    + 'Hold inne en rute for å rette, angre eller sette DNF.</p></div>';
+
+  return h;
+}
+
+/* ------------------------------------------------------------- startlista */
+function htmlStart(l){
+  if (!l.deltakere.length){
+    return kort('Ingen deltakere ennå', '<button class="knapp primar" data-fane="deltakere">Gå til Deltakere</button>');
+  }
+  if (l.tidtakingModus === 'malstrek'){
+    return kort('Klokka starter ved streken',
+      '<p class="svak">Løpet er satt opp slik at klokka begynner når rytteren passerer tidtakerstreken. '
+      + 'Startposten slipper rytterne ut i den rekkefølgen som passer, med jevnt mellomrom, '
+      + 'men skal ikke registrere noe her. Målposten tar alle tidene.</p>');
+  }
+
+  var startede = l.deltakere.filter(function(d){ return d.faktiskStart != null; })
+    .sort(function(a,b){ return b.faktiskStart - a.faktiskStart; });
+  var igjen = l.deltakere.filter(function(d){ return F.tilstandFor(l, d).kode === 'hvit'; }).length;
+
+  var h = '';
+  h += '<div class="kort"><div class="rad mellom">'
+    + '<div><div class="svak" style="font-size:13px">Siden forrige start</div>'
+    + '<div id="sidenStart" class="tall">-</div></div>'
+    + '<div style="text-align:right"><div class="svak" style="font-size:13px">Igjen å sende ut</div>'
+    + '<div style="font-size:32px;font-weight:800" class="tall">' + igjen + '</div></div>'
+    + '</div>'
+    + '<p class="svak" style="font-size:13px;margin:8px 0 0">Anbefalt mellomrom er ' + l.intervallSek + ' sekunder. '
+    + 'Rekkefølgen er fri, send ut den som er klar.</p></div>';
+
+  h += '<div class="kort"><h2>Ikke startet</h2>'
+    + '<input class="sokefelt" id="startSok" placeholder="Søk på nummer eller navn" autocomplete="off" value="' + esc(sokTekst) + '">'
+    + '<div id="startListe">' + htmlStartListe(l) + '</div></div>';
+
+  h += '<div class="kort"><h2>Sist sendt ut</h2>'
+    + (startede.length ? startede.slice(0,8).map(function(d){
+        return '<div class="sistrad"><span class="nr">' + d.nr + '</span><span>' + esc(d.navn||'')
+          + '</span><span class="tid">' + F.klokkeslett(d.faktiskStart, true) + '</span></div>';
+      }).join('') : '<p class="tom">Ingen ennå.</p>')
+    + '</div>';
+
+  return h;
+}
+
+function htmlStartListe(l){
+  var sok = sokTekst.trim().toLowerCase();
+  var liste = l.deltakere.filter(function(d){ return F.tilstandFor(l, d).kode === 'hvit'; })
+    .sort(function(a,b){ return a.nr - b.nr; })
+    .filter(function(d){
+      if (!sok) return true;
+      return String(d.nr).indexOf(sok) === 0 || (d.navn||'').toLowerCase().indexOf(sok) >= 0;
+    });
+  if (!liste.length) return '<p class="tom">' + (sok ? 'Ingen treff.' : 'Alle er sendt ut.') + '</p>';
+  return liste.map(function(d){
+    var meta = [];
+    if (d.alder != null) meta.push(d.alder + ' år');
+    if (d.klasse) meta.push(d.klasse);
+    return '<button class="startrad" data-startnr="' + d.nr + '">'
+      + '<span class="snr">' + d.nr + '</span>'
+      + '<span class="snavn">' + esc(d.navn || '(uten navn)')
+      + (meta.length ? '<span class="smeta">' + esc(meta.join(' · ')) + '</span>' : '') + '</span>'
+      + '<span class="sknapp">START</span></button>';
+  }).join('');
+}
+
+/* ---------------------------------------------------------------- resultat */
+function grupperFor(l){
+  if (gruppering === 'alder'){
+    var g = F.alderGrupper(l).map(function(x){
+      return { navn: x.navn, pred: function(d){ return F.aldersgruppeFor(l, d) === x.navn; } };
+    });
+    g.push({ navn: 'Uten aldersgruppe', pred: function(d){ return F.aldersgruppeFor(l, d) === ''; } });
+    return g;
+  }
+  if (gruppering === 'klasse'){
+    var sett = {};
+    l.deltakere.forEach(function(d){ sett[d.klasse || 'Uten klasse'] = 1; });
+    return Object.keys(sett).sort().map(function(k){
+      return { navn: k, pred: function(d){ return (d.klasse || 'Uten klasse') === k; } };
+    });
+  }
+  return [{ navn: null, pred: null }];
+}
+
+function htmlResultat(l){
+  var antall = Number(l.antallRunder);
+  var h = '';
+
+  h += '<div class="kort ikkePrint"><div class="rad mellom">'
+    + '<div class="velger">'
+    + ['sammenlagt','alder','klasse'].map(function(g){
+        var navn = g === 'sammenlagt' ? 'Sammenlagt' : g === 'alder' ? 'Aldersgrupper' : 'Klasser';
+        return '<button data-gruppering="' + g + '" class="' + (gruppering===g?'valgt':'') + '">' + navn + '</button>';
+      }).join('')
+    + '</div>'
+    + '<span class="rad">'
+    + '<button class="knapp mini" data-handling="eksportResultatCsv">CSV</button>'
+    + '<button class="knapp mini" data-handling="skrivUt">Skriv ut</button></span></div></div>';
+
+  var grupper = grupperFor(l);
+  var noeVist = false;
+
+  grupper.forEach(function(g){
+    var r = F.beregnResultater(l, g.pred);
+    if (!r.ferdige.length && !r.andre.length) return;
+    noeVist = true;
+    h += '<div class="kort"><h2>' + esc(l.navn) + (g.navn ? ' · ' + esc(g.navn) : '') + '</h2>';
+    if (!r.ferdige.length){
+      h += '<p class="tom">Ingen har fullført alle ' + antall + ' rundene ennå.</p>';
+    }else{
+      var kol = '';
+      for (var i=0;i<antall;i++) kol += '<th class="tall">Runde ' + (i+1) + '</th>';
+      h += '<div class="tabellRam"><table><thead><tr><th class="tall">#</th><th class="tall">Nr</th><th>Navn</th>'
+        + '<th class="tall">Alder</th>' + kol + '<th class="tall">Avvik</th></tr></thead><tbody>'
+        + r.ferdige.map(function(x){
+            var celler = '';
+            for (var j=0;j<antall;j++) celler += '<td class="tall">' + F.varighet(x.runder[j]) + '</td>';
+            return '<tr class="' + (x.plass===1?'vinner':'') + '">'
+              + '<td class="tall"><b>' + x.plass + '</b></td>'
+              + '<td class="tall">' + x.d.nr + '</td>'
+              + '<td>' + esc(x.d.navn||'') + '</td>'
+              + '<td class="tall">' + (x.d.alder != null ? x.d.alder : '') + '</td>'
+              + celler + '<td class="tall"><b>' + F.sekTekst(x.avvik) + ' s</b></td></tr>';
+          }).join('') + '</tbody></table></div>';
+    }
+    if (r.andre.length){
+      h += '<p class="svak" style="font-size:13px;margin:10px 0 4px">Ikke fullført</p>'
+        + '<div class="tabellRam"><table><tbody>'
+        + r.andre.map(function(x){
+            var t = F.tilstandFor(l, x.d);
+            var merke = x.d.status === 'DNS' ? '<span class="merke">DNS</span>'
+              : x.d.status === 'DNF' ? '<span class="merke feil">DNF</span>'
+              : x.feil ? '<span class="merke feil">tid ser feil ut</span>'
+              : t.kode === 'hvit' ? '<span class="merke">ikke startet</span>'
+              : '<span class="merke varsel">på runde ' + t.paaRunde + '</span>';
+            return '<tr><td class="tall">' + x.d.nr + '</td><td>' + esc(x.d.navn||'') + '</td><td>' + merke + '</td>'
+              + '<td class="tall">' + (x.runder.length ? F.varighet(x.runder[0]) : '') + '</td></tr>';
+          }).join('') + '</tbody></table></div>';
+    }
+    h += '</div>';
+  });
+
+  if (!noeVist) h += kort(l.navn, '<p class="tom">Ingen deltakere ennå.</p>');
+  return h;
+}
+
+/* --------------------------------------------------------------- deltakere */
+function htmlDeltakere(l){
+  var h = '<div class="kort"><h2>Startliste</h2><div class="rad" style="margin-bottom:8px">'
+    + '<button class="knapp mini primar" data-handling="nyDeltaker">Legg til rytter</button>'
+    + '<button class="knapp mini" data-handling="visLim">Lim inn liste</button>'
+    + '<button class="knapp mini" data-handling="eksportDeltakereCsv">CSV</button></div>';
+
+  if (!l.deltakere.length){
+    h += '<p class="tom">Tom. Lim inn startlista, eller legg til rytterne én for én.</p>';
+  }else{
+    h += '<div class="tabellRam"><table><thead><tr>'
+      + '<th class="tall">Nr</th><th>Navn</th><th class="tall">Alder</th><th>Klasse</th>'
+      + '<th>Aldersgruppe</th><th>Status</th><th></th></tr></thead><tbody>'
+      + l.deltakere.slice().sort(function(a,b){ return a.nr-b.nr; }).map(function(d){
+          return '<tr>'
+            + '<td><input class="nr tall" value="' + esc(d.nr) + '" data-endre="nr" data-nr="' + d.nr + '"></td>'
+            + '<td><input value="' + esc(d.navn||'') + '" data-endre="navn" data-nr="' + d.nr + '"></td>'
+            + '<td><input class="alder tall" type="number" min="1" max="99" value="' + (d.alder != null ? d.alder : '')
+              + '" data-endre="alder" data-nr="' + d.nr + '"></td>'
+            + '<td><input value="' + esc(d.klasse||'') + '" data-endre="klasse" data-nr="' + d.nr + '" style="min-width:80px"></td>'
+            + '<td class="svak" style="font-size:13px">' + esc(F.aldersgruppeFor(l, d) || '-') + '</td>'
+            + '<td><select data-endre="status" data-nr="' + d.nr + '">'
+              + ['OK','DNS','DNF'].map(function(s){ return '<option ' + (d.status===s?'selected':'') + '>' + s + '</option>'; }).join('')
+              + '</select></td>'
+            + '<td class="tall"><button class="knapp mini fare" data-handling="slettDeltaker" data-nr="' + d.nr + '">Slett</button></td></tr>';
+        }).join('') + '</tbody></table></div>';
+  }
+  h += '</div>';
+
+  h += '<div class="kort" id="limKort" style="display:none"><h2>Lim inn startliste</h2>'
+    + '<p class="svak" style="font-size:13px">Én rytter per linje, skilt med semikolon, komma eller tabulator: '
+    + '<code>startnr;navn;alder;klasse</code>. Alder og klasse kan stå i hvilken som helst rekkefølge, '
+    + 'og kan sløyfes. Uten nummer får rytteren neste ledige.</p>'
+    + '<textarea id="limFelt" rows="8" style="width:100%;padding:10px;border:1px solid var(--kant);border-radius:8px;background:var(--bg)"'
+    + ' placeholder="1;Kari Nordmann;11;Jenter&#10;2;Ola Hansen;12;Gutter"></textarea>'
+    + '<div class="rad" style="margin-top:8px">'
+    + '<button class="knapp primar" data-handling="importerLim">Legg inn</button>'
+    + '<button class="knapp" data-handling="visLim">Lukk</button></div></div>';
+  return h;
+}
+
+/* ----------------------------------------------------------------- oppsett */
+function htmlOppsett(l){
+  var modus = l.tidtakingModus;
+  return '<div class="kort"><h2>Løpet</h2>'
+    + felt('Navn', 'navn', 'text', l.navn)
+    + felt('Dato', 'dato', 'date', l.dato)
+    + felt('Antall runder', 'antallRunder', 'number', l.antallRunder)
+    + felt('Antatt rundetid (minutter)', 'antattRundeMin', 'number', l.antattRundeMin)
+    + felt('Anbefalt mellomrom ved start (sekunder)', 'intervallSek', 'number', l.intervallSek)
+    + '<p class="svak" style="font-size:13px">Antatt rundetid brukes bare til å anslå når en rytter kommer '
+    + 'tilbake første gang. Så snart tre runder er registrert, regner appen med den reelle mediantiden.</p></div>'
+
+    + '<div class="kort"><h2>Aldersgrupper</h2>'
+    + felt('Grupper', 'aldersgrupper', 'text', l.aldersgrupper)
+    + '<p class="svak" style="font-size:13px">Skriv gruppene med bindestrek og komma, for eksempel '
+    + '<code>6-9, 10-12, 13-15, 16+</code>. Resultatlista kan vises sammenlagt eller delt i disse gruppene. '
+    + 'Grupperingen påvirker ikke tidtakinga, bare hvordan resultatene sorteres.</p>'
+    + '<div class="rad">' + F.alderGrupper(l).map(function(g){
+        return '<span class="merke">' + esc(g.navn) + '</span>';
+      }).join('') + '</div></div>'
+
+    + '<div class="kort"><h2>Hvor starter klokka?</h2>'
+    + '<div class="velger">'
+    + '<button data-modus="startsted" class="' + (modus==='startsted'?'valgt':'') + '">Ved start</button>'
+    + '<button data-modus="malstrek" class="' + (modus==='malstrek'?'valgt':'') + '">Ved tidtakerstreken</button>'
+    + '</div>'
+    + '<p class="svak" style="font-size:13px;margin-top:10px">'
+    + (modus === 'startsted'
+        ? 'Startposten registrerer når rytteren sendes ut, og målposten registrerer to passeringer. '
+          + 'Dette forutsetter at strekningen fra startområdet fram til streken er like lang som en runde, '
+          + 'slik at de to rundene kan sammenlignes.'
+        : 'Klokka begynner først når rytteren passerer tidtakerstreken. Målposten registrerer '
+          + (Number(l.antallRunder)+1) + ' passeringer per rytter, og startposten registrerer ingenting.')
+    + '</p></div>'
+
+    + '<div class="kort"><h2>Slik kåres vinneren</h2>'
+    + '<p class="svak" style="font-size:14px">Minst forskjell mellom rundetidene vinner. '
+    + 'Ved flere enn to runder summeres avviket fra runde 1.</p></div>'
+
+    + '<div class="kort"><h2>Visning</h2>'
+    + '<button class="knapp" data-handling="natt">'
+    + (document.body.classList.contains('natt') ? 'Dagmodus' : 'Nattmodus') + '</button></div>';
+}
+
+function felt(etikett, nokkel, type, verdi){
+  return '<label class="felt">' + esc(etikett)
+    + '<input type="' + type + '" value="' + esc(verdi) + '" data-oppsett="' + nokkel + '"></label>';
+}
+
+/* -------------------------------------------------------------------- data */
+function htmlData(l){
+  var h = '';
+  h += '<div class="kort"><h2>Tilkobling</h2><p class="svak" style="font-size:14px">'
+    + (tilkoblet ? 'På nett mot serveren.' : 'Ingen kontakt med serveren nå. Registreringer lagres her og sendes automatisk.')
+    + '<br>' + koe.length + ' hendelser i kø.'
+    + '<br>Klokkeavvik mot server: ' + (SYNK ? (TID_AVVIK/1000).toFixed(2).replace('.',',') + ' s (målt med ' + SYNK.rtt + ' ms svartid)' : 'ikke målt')
+    + '</p><div class="rad">'
+    + '<button class="knapp" data-handling="synk">Still klokka på nytt</button>'
+    + '<button class="knapp" data-handling="frisk">Hent tilstand</button>'
+    + (token ? '<button class="knapp" data-handling="loggUt">Bytt post</button>' : '')
+    + '</div></div>';
+
+  h += '<div class="kort"><h2>Storskjerm</h2>'
+    + '<p class="svak" style="font-size:13px">Egen visning for TV eller projektor. Den viser rutenettet og '
+    + 'resultatlista, men aldri rundetider for ryttere som fortsatt er ute på løypa.</p>'
+    + '<button class="knapp primar" data-handling="apneTv">Åpne storskjermvisning</button></div>';
+
+  h += '<div class="kort"><h2>Sikkerhetskopi</h2>'
+    + '<p class="svak" style="font-size:13px">Serveren lagrer fortløpende og tar kopi hvert femte minutt. '
+    + 'Last likevel ned en fil når siste rytter er i mål.</p><div class="rad">'
+    + '<button class="knapp primar" data-handling="eksportJson">Last ned løpet</button>'
+    + '<button class="knapp" data-handling="eksportResultatCsv">Resultat (CSV)</button>'
+    + '<button class="knapp" data-handling="eksportPasseringerCsv">Passeringer (CSV)</button></div></div>';
+
+  h += '<div class="kort"><h2>Test og øving</h2><div class="rad">'
+    + '<button class="knapp" data-handling="testDeltakere">Lag 20 testryttere</button>'
+    + '<button class="knapp" data-handling="testLop">Simuler ferdig løp</button></div>'
+    + '<p class="svak" style="font-size:13px;margin-top:8px">Øv på tidtaking før løpsdagen. Nullstill etterpå.</p></div>';
+
+  h += '<div class="kort"><h2>Status</h2><p class="svak" style="font-size:14px">'
+    + l.deltakere.length + ' ryttere, ' + l.passeringer.length + ' passeringer, '
+    + F.utildelte(l).length + ' uten startnummer.</p>'
+    + '<button class="knapp fare" data-handling="nullstill">Nullstill løpet</button></div>';
+
+  var logg = (l.logg||[]).slice(-40).reverse();
+  h += '<div class="kort"><h2>Logg</h2>' + (logg.length
+    ? '<div style="max-height:260px;overflow:auto;font-size:13px">' + logg.map(function(x){
+        return '<div class="svak"><span class="tall">' + F.klokkeslett(x.tid, true) + '</span> '
+          + esc(x.tekst) + (x.av ? ' <span class="merke">' + esc(x.av) + '</span>' : '') + '</div>';
+      }).join('') + '</div>'
+    : '<p class="tom">Tom.</p>') + '</div>';
+  return h;
+}
+
+function kort(tittel, innhold){
+  return '<div class="kort"><h2>' + esc(tittel) + '</h2>' + innhold + '</div>';
+}
+
+/* =========================================================================
+   Registrering
+   ========================================================================= */
+function trykkRute(nr){
+  var l = lop();
+  var d = F.finnDeltaker(l, nr);
+  if (!d) return;
+  var t = F.tilstandFor(l, d);
+
+  // En banket tid som venter på nummer skal tildeles i stedet for å ta tid nå
+  if (valgtBanket){
+    var p = F.finnPassering(l, valgtBanket);
+    var pid = valgtBanket;
+    valgtBanket = null;
+    if (p){
+      send({ type:'tildel', pid:pid, nr:nr, tid:na() },
+           'tid til nr ' + nr, { type:'tildel', pid:pid, nr:null, tid:na() });
+      visKvittering('#' + nr + ' ' + (d.navn||''), 'fikk tiden ' + F.klokkeslett(p.tid, true));
+    }
+    return;
+  }
+
+  if (t.kode === 'dns' || t.kode === 'dnf'){
+    visKvittering('#' + nr + ' er merket ' + t.kode.toUpperCase(), 'Hold inne ruta for å endre', true);
+    return;
+  }
+  if (!t.nesteType){
+    visKvittering('#' + nr + ' ' + (d.navn||'') + ' er allerede i mål', 'Hold inne ruta for å rette', true);
+    return;
+  }
+
+  // Ingen kan passere to ganger på ett minutt når runden er flere minutter.
+  // Et nytt trykk så raskt er nesten alltid en dobbelttrykk-bom.
+  if (t.sisteTid != null && na() - t.sisteTid < DOBBEL_SPERRE_MS){
+    if (bekreftNr !== nr || na() > bekreftFrist){
+      bekreftNr = nr; bekreftFrist = na() + 6000;
+      visKvittering('#' + nr + ' ble registrert for ' + Math.round((na()-t.sisteTid)/1000) + ' sekunder siden',
+        'Trykk en gang til hvis det stemmer', true);
+      tegn();
+      return;
+    }
+  }
+  bekreftNr = null;
+
+  var tid = na();
+  var navn = '#' + nr + ' ' + (d.navn || '');
+
+  if (t.nesteType === 'start'){
+    send({ type:'start', nr:nr, tid:tid }, 'start nr ' + nr, { type:'angreStart', nr:nr, tid:tid });
+    visKvittering(navn, 'sendt ut ' + F.klokkeslett(tid, true));
+  }else{
+    var id = lagHid();
+    var rundetid = t.sisteTid != null ? tid - t.sisteTid : null;
+    var runder = F.runderFor(l, d);
+    var erSiste = t.paaRunde >= Number(l.antallRunder);
+    var under = '';
+    if (rundetid != null) under = 'runde ' + t.paaRunde + ': ' + F.varighet(rundetid);
+    if (erSiste && runder.length && rundetid != null){
+      under += ' · avvik ' + F.sekTekst(Math.abs(rundetid - runder[0])) + ' s';
+    }
+    send({ type:'passering', id:id, tid:tid, nr:nr, kilde:'rutenett' },
+         'passering nr ' + nr, { type:'slettPassering', pid:id, tid:tid });
+
+    var median = F.medianRunde(l);
+    var rart = median != null && rundetid != null && (rundetid < median*0.4 || rundetid > median*2.5);
+    visKvittering(navn + (erSiste ? ' i mål' : ''), under + (rart ? ' · sjekk at det er riktig rytter' : ''), rart);
+  }
+  blink();
+}
+
+function trykkStart(nr){
+  var l = lop();
+  var d = F.finnDeltaker(l, nr);
+  if (!d) return;
+  var t = F.tilstandFor(l, d);
+  if (t.nesteType !== 'start'){ varsle('#' + nr + ' er allerede sendt ut.'); return; }
+  var tid = na();
+  send({ type:'start', nr:nr, tid:tid }, 'start nr ' + nr, { type:'angreStart', nr:nr, tid:tid });
+  visKvittering('#' + nr + ' ' + (d.navn||''), 'sendt ut ' + F.klokkeslett(tid, true));
+  blink();
+}
+
+/* =========================================================================
+   Rytterpanel (langt trykk)
+   ========================================================================= */
+function apnePanel(nr){
+  var l = lop();
+  var d = F.finnDeltaker(l, nr);
+  if (!d) return;
+  var t = F.tilstandFor(l, d);
+  var runder = F.runderFor(l, d);
+  var start = F.startFor(l, d);
+
+  var tider = '';
+  if (start != null) tider += '<div class="sistrad"><span>Start</span><span class="tid">' + F.klokkeslett(start, true) + '</span></div>';
+  t.ps.forEach(function(p, i){
+    var etikett = l.tidtakingModus === 'malstrek'
+      ? (i === 0 ? 'Klokka startet' : 'Runde ' + i)
+      : 'Runde ' + (i+1);
+    var lengde = l.tidtakingModus === 'malstrek' ? (i > 0 ? runder[i-1] : null) : runder[i];
+    tider += '<div class="sistrad"><span>' + etikett + '</span>'
+      + '<span class="tid">' + F.klokkeslett(p.tid, true) + (lengde != null ? ' · ' + F.varighet(lengde) : '') + '</span>'
+      + '<button class="knapp mini" data-panel="minus" data-pid="' + esc(p.id) + '">-1s</button>'
+      + '<button class="knapp mini" data-panel="pluss" data-pid="' + esc(p.id) + '">+1s</button>'
+      + '<button class="knapp mini fare" data-panel="slettP" data-pid="' + esc(p.id) + '">Slett</button></div>';
+  });
+
+  var meta = [];
+  if (d.alder != null) meta.push(d.alder + ' år');
+  if (d.klasse) meta.push(d.klasse);
+  if (F.aldersgruppeFor(l, d)) meta.push(F.aldersgruppeFor(l, d));
+
+  el('panelInnhold').innerHTML =
+    '<h3>#' + d.nr + ' ' + esc(d.navn || '') + '</h3>'
+    + '<p class="svak" style="margin:0 0 12px">' + esc(meta.join(' · ')) + '</p>'
+    + (tider || '<p class="tom">Ingen tider registrert.</p>')
+    + '<div class="rad" style="margin-top:14px">'
+    + (t.startet && !t.ps.length ? '<button class="knapp" data-panel="angreStart" data-nr="' + d.nr + '">Angre start</button>' : '')
+    + '<button class="knapp" data-panel="status" data-nr="' + d.nr + '" data-verdi="' + (d.status === 'DNF' ? 'OK' : 'DNF') + '">'
+      + (d.status === 'DNF' ? 'Fjern DNF' : 'Sett DNF') + '</button>'
+    + '<button class="knapp" data-panel="status" data-nr="' + d.nr + '" data-verdi="' + (d.status === 'DNS' ? 'OK' : 'DNS') + '">'
+      + (d.status === 'DNS' ? 'Fjern DNS' : 'Møtte ikke') + '</button>'
+    + '<button class="knapp primar" data-panel="lukk" style="margin-left:auto">Lukk</button>'
+    + '</div>';
+  el('panel').className = '';
+}
+function lukkPanel(){ el('panel').className = 'skjult'; }
+
+/* =========================================================================
+   Hendelser fra brukeren
+   ========================================================================= */
+var langtTrykkTimer = null, langtTrykkTruffet = false, trykkStartXY = null;
+
+document.addEventListener('pointerdown', function(ev){
+  var n = ev.target.closest('[data-rute]');
+  if (!n) return;
+  var nr = Number(n.getAttribute('data-rute'));
+  langtTrykkTruffet = false;
+  trykkStartXY = [ev.clientX, ev.clientY];
+  clearTimeout(langtTrykkTimer);
+  langtTrykkTimer = setTimeout(function(){
+    langtTrykkTruffet = true;
+    apnePanel(nr);
+  }, 550);
+});
+document.addEventListener('pointermove', function(ev){
+  if (!trykkStartXY) return;
+  if (Math.abs(ev.clientX - trykkStartXY[0]) > 12 || Math.abs(ev.clientY - trykkStartXY[1]) > 12){
+    clearTimeout(langtTrykkTimer); trykkStartXY = null;
+  }
+});
+['pointerup','pointercancel'].forEach(function(e){
+  document.addEventListener(e, function(){ clearTimeout(langtTrykkTimer); trykkStartXY = null; });
+});
+
+document.addEventListener('click', function(ev){
+  var n;
+
+  if ((n = ev.target.closest('[data-rute]'))){
+    if (langtTrykkTruffet){ langtTrykkTruffet = false; return; }
+    trykkRute(Number(n.getAttribute('data-rute')));
+    return;
+  }
+  if ((n = ev.target.closest('[data-startnr]'))){ trykkStart(Number(n.getAttribute('data-startnr'))); return; }
+  if ((n = ev.target.closest('[data-banket]'))){
+    var id = n.getAttribute('data-banket');
+    valgtBanket = (valgtBanket === id) ? null : id;
+    tegn(); return;
+  }
+  if ((n = ev.target.closest('[data-panel]'))){ panelHandling(n); return; }
+  if (ev.target.id === 'panel'){ lukkPanel(); return; }
+  if ((n = ev.target.closest('[data-fane]'))){ byttFane(n.getAttribute('data-fane')); return; }
+  if ((n = ev.target.closest('[data-gruppering]'))){ gruppering = n.getAttribute('data-gruppering'); tegn(); return; }
+  if ((n = ev.target.closest('[data-rolle]'))){
+    valgtRolle = n.getAttribute('data-rolle');
+    Array.prototype.forEach.call(document.querySelectorAll('[data-rolle]'), function(b){
+      b.classList.toggle('valgt', b === n);
+    });
+    return;
+  }
+  if ((n = ev.target.closest('[data-modus]'))){
+    send({ type:'oppsett', felt:'tidtakingModus', verdi:n.getAttribute('data-modus'), tid:na() });
+    return;
+  }
+  if ((n = ev.target.closest('[data-handling]'))){ handling(n.getAttribute('data-handling'), n); return; }
+});
+
+document.addEventListener('input', function(ev){
+  if (ev.target.id === 'startSok'){
+    sokTekst = ev.target.value;
+    var boks = el('startListe');
+    if (boks) boks.innerHTML = htmlStartListe(lop());
+    sisteHtml = null;   // tvinger full tegning neste gang noe annet endrer seg
+  }
+});
+
+document.addEventListener('change', function(ev){
+  var n;
+  if ((n = ev.target.closest('[data-oppsett]'))){
+    var nokkel = n.getAttribute('data-oppsett');
+    send({ type:'oppsett', felt:nokkel, verdi: n.type === 'number' ? Number(n.value) : n.value, tid:na() });
+    return;
+  }
+  if ((n = ev.target.closest('[data-endre]'))){
+    var felt2 = n.getAttribute('data-endre');
+    var v = (felt2 === 'nr') ? Number(n.value) : n.value;
+    send({ type:'endreDeltaker', nr:Number(n.getAttribute('data-nr')), felt:felt2, verdi:v, tid:na() });
+    return;
+  }
+});
+
+document.addEventListener('keydown', function(ev){
+  if (/^(INPUT|TEXTAREA|SELECT)$/.test(ev.target.tagName)) return;
+  if ((ev.metaKey || ev.ctrlKey) && ev.key === 'z'){ ev.preventDefault(); angre(); }
+  if (ev.key === 'Escape') lukkPanel();
+});
+
+function byttFane(id){
+  aktivFane = id; sokTekst = ''; valgtBanket = null; bekreftNr = null;
+  try{ localStorage.setItem(LAGER_FANE, id); }catch(e){}
+  window.scrollTo(0,0);
+  sisteHtml = null;
+  tegn();
+}
+
+function panelHandling(node){
+  var hva = node.getAttribute('data-panel');
+  var l = lop();
+  if (hva === 'lukk'){ lukkPanel(); return; }
+  if (hva === 'angreStart'){
+    var anr = Number(node.getAttribute('data-nr'));
+    var gammel = F.finnDeltaker(l, anr).faktiskStart;
+    send({ type:'angreStart', nr:anr, tid:na() }, 'angret start nr ' + anr, { type:'start', nr:anr, tid:gammel });
+    lukkPanel(); return;
+  }
+  if (hva === 'status'){
+    var snr = Number(node.getAttribute('data-nr'));
+    var verdi = node.getAttribute('data-verdi');
+    var forrige = F.finnDeltaker(l, snr).status;
+    send({ type:'endreDeltaker', nr:snr, felt:'status', verdi:verdi, tid:na() },
+         'status nr ' + snr, { type:'endreDeltaker', nr:snr, felt:'status', verdi:forrige, tid:na() });
+    lukkPanel(); return;
+  }
+  var pid = node.getAttribute('data-pid');
+  var p = F.finnPassering(l, pid);
+  if (!p) return;
+  if (hva === 'minus' || hva === 'pluss'){
+    var delta = hva === 'minus' ? -1000 : 1000;
+    send({ type:'settTid', pid:pid, tid:p.tid + delta }, 'justerte tid', { type:'settTid', pid:pid, tid:p.tid });
+    apnePanel(p.nr); return;
+  }
+  if (hva === 'slettP'){
+    send({ type:'slettPassering', pid:pid, tid:na() }, 'slettet passering',
+         { type:'passering', id:p.id, tid:p.tid, nr:p.nr, kilde:p.kilde });
+    lukkPanel(); return;
+  }
+}
+
+function handling(navn, node){
+  var l = lop();
+
+  if (navn === 'angre') return angre();
+  if (navn === 'skrivUt') return window.print();
+  if (navn === 'synk'){ synkKlokke(); return varsle('Stiller klokka mot serveren'); }
+  if (navn === 'frisk') return friskOppTilstand();
+  if (navn === 'tilLogginn'){ aktivFane = 'logginn'; sisteHtml = null; return tegn(); }
+  if (navn === 'apneTv') return window.open('tv', '_blank');
+
+  if (navn === 'ukjent'){
+    var uid = lagHid(), utid = na();
+    send({ type:'passering', id:uid, tid:utid, nr:null, kilde:'ukjent' },
+         'tid uten nummer', { type:'slettPassering', pid:uid, tid:utid });
+    visKvittering('Tiden er tatt vare på', 'Trykk på rytteren den tilhører når du vet nummeret');
+    blink();
+    return;
+  }
+  if (navn === 'velgBortBanket'){ valgtBanket = null; return tegn(); }
+  if (navn === 'slettBanket'){
+    if (!valgtBanket) return;
+    var bp = F.finnPassering(l, valgtBanket);
+    send({ type:'slettPassering', pid:valgtBanket, tid:na() }, 'slettet tid',
+         { type:'passering', id:bp.id, tid:bp.tid, nr:null, kilde:bp.kilde });
+    valgtBanket = null;
+    return;
+  }
+
+  if (navn === 'natt'){
+    document.body.classList.toggle('natt');
+    try{ localStorage.setItem(LAGER_NATT, document.body.classList.contains('natt') ? '1':'0'); }catch(e){}
+    sisteHtml = null;
+    return tegn();
+  }
+
+  if (navn === 'loggInn'){
+    var brukernavn = (el('innNavn').value || '').trim() || rolleNavn(valgtRolle);
+    fetch('api/logg-inn', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ kode: el('innKode').value, navn: brukernavn, rolle: valgtRolle })
+    }).then(function(r){ return r.json().then(function(d){ return { ok:r.ok, d:d }; }); })
+      .then(function(s){
+        if (!s.ok){ varsle(s.d.feil || 'Innlogging feilet'); return; }
+        token = s.d.token; minOkt = s.d.okt;
+        settProfil(minOkt.rolle);
+        try{ localStorage.setItem(nokkelOkt(), JSON.stringify({ token: token, okt: minOkt })); }catch(e){}
+        lagreLokalt();
+        aktivFane = minOkt.rolle === 'start' ? 'start' : 'rutenett';
+        sisteHtml = null;
+        varsle('Logget inn som ' + rolleNavn(minOkt.rolle));
+        tegn(); tomKoe();
+      }).catch(function(){ varsle('Fikk ikke kontakt med serveren.'); });
+    return;
+  }
+
+  if (navn === 'loggUt'){
+    if (koe.length && !confirm(koe.length + ' registreringer er ikke sendt ennå. Bytte post likevel?')) return;
+    token = null; minOkt = null;
+    try{ localStorage.removeItem(nokkelOkt()); }catch(e){}
+    aktivFane = 'logginn'; sisteHtml = null;
+    return tegn();
+  }
+
+  if (navn === 'nyDeltaker'){
+    var nyNr = F.nesteLedigeNr(l);
+    send({ type:'leggTilDeltakere', liste:[{ nr:nyNr, navn:'', klasse:'' }], tid:na() },
+         'ny rytter ' + nyNr, { type:'slettDeltaker', nr:nyNr, tid:na() });
+    return;
+  }
+
+  if (navn === 'slettDeltaker'){
+    var snr2 = Number(node.getAttribute('data-nr'));
+    if (!confirm('Slette startnummer ' + snr2 + '?')) return;
+    send({ type:'slettDeltaker', nr:snr2, tid:na() });
+    return;
+  }
+
+  if (navn === 'visLim'){
+    var kortEl = el('limKort');
+    if (kortEl) kortEl.style.display = kortEl.style.display === 'none' ? 'block' : 'none';
+    return;
+  }
+  if (navn === 'importerLim'){
+    var felt3 = el('limFelt');
+    if (!felt3 || !felt3.value.trim()) return;
+    importerStartliste(felt3.value);
+    return;
+  }
+
+  if (navn === 'eksportJson') return lastNed(filnavn(l) + '.json', JSON.stringify(l, null, 1), 'application/json');
+  if (navn === 'eksportResultatCsv') return eksporterResultatCsv(l);
+  if (navn === 'eksportPasseringerCsv') return eksporterPasseringerCsv(l);
+  if (navn === 'eksportDeltakereCsv') return eksporterDeltakereCsv(l);
+  if (navn === 'testDeltakere') return lagTestdeltakere(l);
+  if (navn === 'testLop') return simulerLop(l);
+
+  if (navn === 'nullstill'){
+    if (!confirm('Nullstille løpet for alle poster?')) return;
+    var beholde = l.deltakere.length ? confirm('Beholde startlista? OK = behold, Avbryt = slett alt.') : false;
+    send({ type:'nullstill', beholdDeltakere: beholde, navn: l.navn, tid:na() });
+    angreStabel = [];
+    return;
+  }
+}
+
+/* Tolker en limt inn startliste. Feltene etter navnet kan komme i hvilken som
+   helst rekkefølge: et lite heltall leses som alder, alt annet som klasse. */
+function importerStartliste(tekst){
+  var linjer = tekst.split(/\r?\n/).map(function(x){ return x.trim(); }).filter(Boolean);
+  var liste = [];
+  linjer.forEach(function(rad){
+    var deler = rad.split(/[;\t,]/).map(function(x){ return x.trim(); }).filter(function(x){ return x !== ''; });
+    if (!deler.length) return;
+    var nr = null, navn = '', alder = null, klasse = '';
+    var i = 0;
+    if (deler.length > 1 && /^\d{1,4}$/.test(deler[0])){ nr = Number(deler[0]); i = 1; }
+    else if (deler.length === 1){
+      var m = rad.match(/^(\d{1,4})\s+(.+)$/);
+      if (m){ nr = Number(m[1]); navn = m[2]; i = deler.length; }
+    }
+    if (!navn && i < deler.length) navn = deler[i++];
+    for (; i < deler.length; i++){
+      if (alder == null && /^\d{1,2}$/.test(deler[i])) alder = Number(deler[i]);
+      else if (!klasse) klasse = deler[i];
+    }
+    if (/^(nr|startnr|startnummer)$/i.test(String(deler[0]))) return;   // overskriftsrad
+    if (!navn) return;
+    liste.push({ nr: nr, navn: navn, alder: alder, klasse: klasse });
+  });
+  if (!liste.length){ varsle('Fant ingen ryttere i teksten.'); return; }
+  send({ type:'leggTilDeltakere', liste:liste, tid:na() });
+  varsle('La inn ' + liste.length + ' ryttere.');
+  var k = el('limKort'); if (k) k.style.display = 'none';
+}
+
+/* ------------------------------------------------------------------ filer */
+function lastNed(fil, innhold, type){
+  var blob = new Blob([innhold], { type: type });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = fil;
+  document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(url); a.remove(); }, 500);
+}
+
+function filnavn(l){
+  return (l.navn || 'lop').replace(/[^\wæøåÆØÅ]+/g,'-').toLowerCase() + '-' + l.dato;
+}
+
+function csv(rader){
+  return '﻿' + rader.map(function(r){
+    return r.map(function(c){
+      var s = String(c == null ? '' : c);
+      return /[;"\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
+    }).join(';');
+  }).join('\r\n');
+}
+
+function eksporterResultatCsv(l){
+  var antall = Number(l.antallRunder);
+  var hode = ['gruppe','plass','startnr','navn','alder','klasse'];
+  for (var i=0;i<antall;i++){ hode.push('runde'+(i+1)); hode.push('runde'+(i+1)+'_sek'); }
+  hode.push('avvik_sek','status');
+  var rader = [hode];
+
+  grupperFor(l).forEach(function(g){
+    var r = F.beregnResultater(l, g.pred);
+    r.ferdige.forEach(function(x){
+      var rad = [g.navn || 'Sammenlagt', x.plass, x.d.nr, x.d.navn, x.d.alder == null ? '' : x.d.alder, x.d.klasse];
+      for (var j=0;j<antall;j++){ rad.push(F.varighet(x.runder[j])); rad.push(F.sekTekst(x.runder[j])); }
+      rad.push(F.sekTekst(x.avvik), 'Fullført');
+      rader.push(rad);
+    });
+    r.andre.forEach(function(x){
+      var rad = [g.navn || 'Sammenlagt', '', x.d.nr, x.d.navn, x.d.alder == null ? '' : x.d.alder, x.d.klasse];
+      for (var j=0;j<antall;j++){ rad.push(F.varighet(x.runder[j])); rad.push(F.sekTekst(x.runder[j])); }
+      rad.push('', x.d.status === 'OK' ? 'Ikke fullført' : x.d.status);
+      rader.push(rad);
+    });
+  });
+  lastNed(filnavn(l) + '-resultat.csv', csv(rader), 'text/csv');
+}
+
+function eksporterPasseringerCsv(l){
+  var rader = [['klokkeslett','startnr','navn','nr_i_rekka','registrert_av','kilde']];
+  l.passeringer.slice().sort(function(a,b){ return a.tid-b.tid; }).forEach(function(p){
+    var d = p.nr != null ? F.finnDeltaker(l, p.nr) : null;
+    var indeks = '';
+    if (d) indeks = F.passeringerFor(l, p.nr).findIndex(function(x){ return x.id === p.id; }) + 1;
+    rader.push([F.klokkeslett(p.tid, true), p.nr == null ? '' : p.nr, d ? d.navn : '', indeks, p.av||'', p.kilde||'']);
+  });
+  lastNed(filnavn(l) + '-passeringer.csv', csv(rader), 'text/csv');
+}
+
+function eksporterDeltakereCsv(l){
+  var rader = [['startnr','navn','alder','klasse','aldersgruppe','reell_start','status']];
+  l.deltakere.slice().sort(function(a,b){ return a.nr-b.nr; }).forEach(function(d){
+    rader.push([d.nr, d.navn, d.alder == null ? '' : d.alder, d.klasse, F.aldersgruppeFor(l, d),
+      d.faktiskStart != null ? F.klokkeslett(d.faktiskStart, true) : '', d.status]);
+  });
+  lastNed(filnavn(l) + '-startliste.csv', csv(rader), 'text/csv');
+}
+
+/* --------------------------------------------------------------- testdata */
+var TESTNAVN = ['Kari Nordmann','Ola Hansen','Ingrid Lie','Jonas Berg','Mette Aas','Petter Solheim',
+  'Silje Moen','Anders Vik','Hanne Ruud','Erik Dahl','Tove Lund','Bjørn Ness','Emma Strand','Noah Haug',
+  'Sofie Bakke','Filip Sund','Nora Hagen','Oskar Lien','Thea Rygg','Mathias Fjeld'];
+
+function lagTestdeltakere(l){
+  var start = F.nesteLedigeNr(l);
+  send({ type:'leggTilDeltakere', tid:na(), liste: TESTNAVN.map(function(n,i){
+    return { nr: start + i, navn: n, alder: 8 + (i % 9), klasse: i%2 ? 'Gutter' : 'Jenter' };
+  })});
+  varsle('La inn ' + TESTNAVN.length + ' testryttere.');
+}
+
+function simulerLop(l){
+  if (!l.deltakere.length){ lagTestdeltakere(l); l = lop(); }
+  var behov = F.passeringsBehov(l);
+  var basis = na() - 45*60*1000;
+  F.aktive(l).forEach(function(d, i){
+    var startTid = basis + i * Number(l.intervallSek) * 1000;
+    if (l.tidtakingModus !== 'malstrek') send({ type:'start', nr:d.nr, tid:startTid });
+    var runde1 = (4.2 + Math.random()*2.2) * 60000;
+    var t = startTid;
+    for (var r=0; r<behov; r++){
+      var erKlokkestart = (l.tidtakingModus === 'malstrek' && r === 0);
+      t += erKlokkestart ? 45000 : (r === (l.tidtakingModus === 'malstrek' ? 1 : 0)
+        ? runde1 : runde1 + (Math.random()-0.5)*50000);
+      send({ type:'passering', id:lagHid(), tid:Math.round(t), nr:d.nr, kilde:'simulert' });
+    }
+  });
+  angreStabel = [];
+  byttFane('resultat');
+  varsle('Simulert løp lagt inn. Nullstill under Data etterpå.');
+}
+
+/* =========================================================================
+   Tikk og oppstart
+   ========================================================================= */
+function tikk(){
+  el('toppKlokke').textContent = F.klokkeslett(na());
+
+  // Rutenettets ringer lever, så den tegnes om. Startlista har et søkefelt vi
+  // ikke vil rive vekk, så der oppdaterer vi bare telleren.
+  if (aktivFane === 'rutenett'){
+    var a = document.activeElement;
+    if (!a || !/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) tegn();
+  }
+  if (aktivFane === 'start'){
+    var boks = el('sidenStart');
+    if (boks){
+      var l = lop();
+      var sist = 0;
+      l.deltakere.forEach(function(d){ if (d.faktiskStart != null && d.faktiskStart > sist) sist = d.faktiskStart; });
+      if (!sist){ boks.textContent = '-'; boks.className = 'tall'; }
+      else {
+        var sek = Math.round((na() - sist)/1000);
+        boks.textContent = sek < 100 ? sek + ' s' : Math.floor(sek/60) + ' min';
+        boks.className = 'tall' + (sek >= Number(l.intervallSek) ? ' klar' : '');
+      }
+    }
+  }
+  if (koe.length && !sender) tomKoe();
+}
+
+var laas = null;
+function holdSkjermenVaaken(){
+  if (!('wakeLock' in navigator)) return;
+  navigator.wakeLock.request('screen').then(function(x){
+    laas = x;
+    x.addEventListener('release', function(){ laas = null; });
+  }).catch(function(){});
+}
+
+document.addEventListener('visibilitychange', function(){
+  if (document.visibilityState === 'visible'){
+    ANKER_VEGG = Date.now(); ANKER_PERF = performance.now();
+    if (!laas) holdSkjermenVaaken();
+    friskOppTilstand(); tomKoe(); tegn();
+  }
+});
+
+window.addEventListener('beforeunload', function(ev){
+  if (koe.length){ ev.preventDefault(); ev.returnValue = ''; }
+});
+
+lastLokalt();
+try{
+  if (localStorage.getItem(LAGER_NATT) === '1') document.body.classList.add('natt');
+  var f = localStorage.getItem(LAGER_FANE);
+  if (f && ALLE_FANER[f]) aktivFane = f;
+}catch(e){}
+if (!token) aktivFane = 'resultat';
+
+tegn();
+synkKlokke();
+friskOppTilstand().then(koble, koble);
+setInterval(tikk, 250);
+setInterval(synkKlokke, 5*60*1000);
+tikk();
+holdSkjermenVaaken();
+
+if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0){
+  navigator.serviceWorker.register('sw.js').catch(function(){});
+}
+
+window.sykkeltid = { lop: lop, na: na, koe: function(){ return koe; }, avvik: function(){ return TID_AVVIK; } };
+
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "sykkeltid",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["apps/sykkeltid/server.js"],
+      "port": 4600,
+      "autoPort": true
+    }
+  ]
+}
