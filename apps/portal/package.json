@@ -1,0 +1,11 @@
+{
+  "name": "@hallakompis/portal",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Forsida på hallakompis.no",
+  "type": "commonjs",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js"
+  }
+}
