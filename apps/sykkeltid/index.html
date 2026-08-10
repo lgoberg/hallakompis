@@ -45,7 +45,19 @@ header{
   padding:calc(6px + env(safe-area-inset-top)) 12px 6px;
   display:flex; align-items:center; gap:8px;
 }
-header .merke{display:flex; align-items:center; gap:8px; min-width:0}
+/* Identitetsfeltet er selve utloggingsknappen. Det ligger allerede der du
+   ser etter hvem du er logget inn som, og stjeler ingen ekstra plass. */
+header .merke{
+  display:flex; align-items:center; gap:8px; min-width:0;
+  border:1px solid var(--kant); background:var(--bg); color:inherit;
+  border-radius:999px; padding:4px 10px 4px 4px; min-height:40px;
+}
+header .merke:active{filter:brightness(.94)}
+header .uttegn{
+  font-size:11px; font-weight:700; color:var(--svak); border-left:1px solid var(--kant);
+  padding-left:8px; margin-left:2px; white-space:nowrap;
+}
+@media (max-width:520px){ header .uttegn{display:none} }
 header .logo{height:26px; width:auto; display:block; flex:0 0 auto}
 header .navn{font-weight:700; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:34vw}
 header .klokke{font-variant-numeric:tabular-nums; font-weight:700; font-size:19px; margin-left:auto}
@@ -212,10 +224,11 @@ td input.alder{width:56px; text-align:center}
 
 <div class="topplinje">
   <header>
-    <span class="merke">
+    <button class="merke" id="toppMerke" data-handling="byttPost" title="Logg ut">
       <img class="logo" src="logo.png" alt="Golia Vel">
       <span class="navn" id="toppNavn">Godlia Rundt</span>
-    </span>
+      <span class="uttegn" id="toppUt" hidden>Logg ut</span>
+    </button>
     <span class="status" id="toppStatus">kobler til</span>
     <span class="klokke tall" id="toppKlokke">--:--:--</span>
     <button class="knapp mini" data-handling="angre" id="angreKnapp">Angre</button>
@@ -508,6 +521,8 @@ function tegn(){
   }else{
     el('toppNavn').textContent = l.navn || 'Godlia Rundt';
   }
+  el('toppUt').hidden = !token;
+  el('toppMerke').title = token ? 'Logg ut' : 'Logg inn';
 
   var s = el('toppStatus');
   if (koe.length){ s.className = 'status venter'; s.textContent = koe.length + ' i kø'; }
@@ -903,7 +918,7 @@ function htmlData(l){
     + '</p><div class="rad">'
     + '<button class="knapp" data-handling="synk">Still klokka på nytt</button>'
     + '<button class="knapp" data-handling="frisk">Hent tilstand</button>'
-    + (token ? '<button class="knapp" data-handling="loggUt">Bytt post</button>' : '')
+    + (token ? '<button class="knapp fare" data-handling="loggUt">Logg ut</button>' : '')
     + '</div></div>';
 
   h += '<div class="kort"><h2>Storskjerm</h2>'
@@ -1283,11 +1298,16 @@ function handling(navn, node){
     return;
   }
 
-  if (navn === 'loggUt'){
-    if (koe.length && !confirm(koe.length + ' registreringer er ikke sendt ennå. Bytte post likevel?')) return;
+  if (navn === 'byttPost' || navn === 'loggUt'){
+    if (!token){ aktivFane = 'logginn'; sisteHtml = null; return tegn(); }
+    if (koe.length){
+      if (!confirm(koe.length + ' registreringer er ikke sendt ennå. De blir liggende lagret her, '
+        + 'men sendes ikke før noen logger inn igjen på denne enheten. Logge ut likevel?')) return;
+    }else if (!confirm('Logge ut ' + (minOkt.navn || '') + '?')) return;
     token = null; minOkt = null;
     try{ localStorage.removeItem(nokkelOkt()); }catch(e){}
     aktivFane = 'logginn'; sisteHtml = null;
+    varsle('Logget ut');
     return tegn();
   }
 
