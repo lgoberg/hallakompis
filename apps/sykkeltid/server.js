@@ -43,9 +43,29 @@ let lop = null;
 let okter = {};              // token -> {navn, rolle, sist}
 const stroemmer = new Set(); // aapne SSE-tilkoblinger
 
+/* Uten en skrivbar datamappe kan ingenting lagres, saa vi stopper med en gang
+   og sier hvorfor. Et feilmontert volum er den vanligste feilen ved utrulling,
+   og en raa stacktrace i loggen hjelper ingen paa loepsdagen. */
 function sikreMapper() {
   for (const m of [DATA_DIR, KOPI_DIR]) {
-    if (!fs.existsSync(m)) fs.mkdirSync(m, { recursive: true });
+    try {
+      if (!fs.existsSync(m)) fs.mkdirSync(m, { recursive: true });
+    } catch (e) {
+      console.error('[sykkeltid] FEIL: får ikke opprettet datamappa ' + m);
+      console.error('[sykkeltid] ' + e.message);
+      console.error('[sykkeltid] Sett SYKKELTID_DATA til en skrivbar mappe, '
+        + 'eller sjekk at volumet er montert der.');
+      process.exit(1);
+    }
+  }
+  try {
+    const proev = path.join(DATA_DIR, '.skrivetest');
+    fs.writeFileSync(proev, 'ok');
+    fs.unlinkSync(proev);
+  } catch (e) {
+    console.error('[sykkeltid] FEIL: datamappa ' + DATA_DIR + ' finnes, men kan ikke skrives til.');
+    console.error('[sykkeltid] ' + e.message);
+    process.exit(1);
   }
 }
 
@@ -183,6 +203,28 @@ const tjener = http.createServer(async (req, res) => {
   // jo mindre variasjon i svartid, jo bedre blir synken.
   if (sti === '/api/tid') {
     return svarJson(res, 200, { t: Date.now() });
+  }
+
+  // Helsesjekk for plattformen. Sjekker ogsaa at datamappa faktisk lar seg
+  // skrive til: et volum som er montert feil ville ellers gitt en tjeneste som
+  // ser frisk ut helt til foerste rytter blir registrert.
+  if (sti === '/health') {
+    let skrivbar = false;
+    try {
+      const proev = path.join(DATA_DIR, '.skrivetest');
+      fs.writeFileSync(proev, String(Date.now()));
+      fs.unlinkSync(proev);
+      skrivbar = true;
+    } catch (e) {}
+    return svarJson(res, skrivbar ? 200 : 503, {
+      ok: skrivbar,
+      datamappe: DATA_DIR,
+      skrivbar: skrivbar,
+      deltakere: lop.deltakere.length,
+      passeringer: lop.passeringer.length,
+      uptime: Math.round(process.uptime()),
+      ts: Date.now()
+    });
   }
 
   if (sti === '/api/logg-inn' && req.method === 'POST') {
