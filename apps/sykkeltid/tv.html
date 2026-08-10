@@ -8,7 +8,7 @@
 <style>
 /* Bevisst gammeldags CSS. Denne siden skal kunne kjoere i nettleseren paa en
    TV, og der er stoetten for nyere ting upaalitelig. Ingen color-mix, ingen
-   nye selektorer, ingen aspect-ratio. */
+   nye selektorer, ingen aspect-ratio, ingen grid-gap-snarveier. */
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;overflow:hidden}
 body{
@@ -17,54 +17,82 @@ body{
   display:flex; flex-direction:column;
 }
 header{
-  display:flex; align-items:center; gap:1.4vw; padding:1.2vh 2vw; border-bottom:1px solid #232b36; flex:0 0 auto;
+  display:flex; align-items:center; gap:1.4vw; padding:1.2vh 2vw;
+  border-bottom:1px solid #232b36; flex:0 0 auto;
 }
-/* logoen har hvit bakgrunn, så den får en lys plate å stå på i mørk visning */
+/* logoen har hvit bakgrunn, saa den faar en lys plate aa staa paa i moerk visning */
 header .logo{height:6vh; width:auto; background:#fff; border-radius:.8vh; padding:.4vh .6vh}
 header .tittel{font-size:3.2vh; font-weight:800; letter-spacing:.01em}
 header .tellere{margin-left:auto; display:flex; gap:2.4vw; font-size:2vh; color:#93a1b2}
 header .tellere b{color:#eef2f7; font-size:2.8vh; font-weight:800}
-main{flex:1 1 auto; padding:2vh 2vw; overflow:hidden; position:relative}
-footer{
-  flex:0 0 auto; padding:1.4vh 2vw; border-top:1px solid #232b36;
-  display:flex; align-items:center; gap:2vw; font-size:1.9vh; color:#93a1b2;
+
+main{flex:1 1 auto; display:flex; padding:1.6vh 2vw; overflow:hidden}
+.venstre{flex:1 1 auto; min-width:0; display:flex; flex-direction:column}
+.hoyre{
+  flex:0 0 27%; min-width:0; display:flex; flex-direction:column;
+  border-left:1px solid #232b36; margin-left:1.6vw; padding-left:1.6vw;
 }
-.prikk{display:inline-block; width:1.6vh; height:1.6vh; border-radius:3px; margin-right:.6vw; vertical-align:middle}
-.p-hvit{background:#e8edf3}
-.p-oransje{background:#e07000}
-.p-lilla{background:#7141c8}
-.p-gronn{background:#12784a}
-footer .status{margin-left:auto}
+.bareEn .hoyre{display:none}
+.bareEn .venstre{flex:1 1 100%}
+.bareResultat .venstre{display:none}
+.bareResultat .hoyre{flex:1 1 100%; border-left:none; margin-left:0; padding-left:0}
 
-h2{font-size:2.6vh; font-weight:700; color:#93a1b2; margin-bottom:1.4vh; text-transform:uppercase; letter-spacing:.06em}
+h2{
+  font-size:2.2vh; font-weight:700; color:#93a1b2; margin-bottom:1.2vh;
+  text-transform:uppercase; letter-spacing:.06em; flex:0 0 auto;
+}
+h2 b{color:#eef2f7; font-weight:800}
 
-/* rutenett */
-#rutenett{display:grid; gap:.7vh; height:100%}
+#rutenett{display:grid; flex:1 1 auto; align-content:start}
 .rute{
   border-radius:.8vh; display:flex; flex-direction:column; align-items:center; justify-content:center;
   font-weight:800; font-variant-numeric:tabular-nums; position:relative; overflow:hidden;
   background:#e8edf3; color:#0c1016; border:2px solid #e8edf3;
-}
-/* Fornavnet gjør at folk finner sin egen unge på skjermen. */
-.rute .rnavn{
-  font-weight:600; opacity:.85; margin-top:.2vh; max-width:92%;
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
 .rute.r-oransje{background:#e07000; border-color:#e07000; color:#fff}
 .rute.r-lilla{background:#7141c8; border-color:#7141c8; color:#fff}
 .rute.r-gronn{background:#12784a; border-color:#12784a; color:#fff}
 .rute.r-dns,.rute.r-dnf{background:#1a212b; border-color:#2b3542; color:#5f6b7a}
 .rute .merke{position:absolute; top:.3vh; right:.5vh; font-size:1.1vh; opacity:.85}
+/* fornavnet gjoer at folk finner sin egen unge paa skjermen */
+.rute .rnavn{
+  font-weight:600; opacity:.85; margin-top:.2vh; max-width:92%;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
 
-/* resultat */
-table{width:100%; border-collapse:collapse}
-td,th{padding:1.1vh 1vw; text-align:left; border-bottom:1px solid #1c232d}
-th{font-size:1.8vh; color:#93a1b2; text-transform:uppercase; letter-spacing:.05em}
-td{font-size:3vh; font-weight:700}
-td.tall,th.tall{text-align:right; font-variant-numeric:tabular-nums}
-tr.gull td{background:#123724}
-.plass{font-size:3.4vh; font-weight:800; color:#7fd6a5; width:3vw}
-.tom{font-size:3vh; color:#93a1b2; padding-top:6vh; text-align:center}
+/* resultatkolonnen */
+.liste{flex:1 1 auto; overflow:hidden}
+.rres{
+  display:flex; align-items:baseline; padding:.85vh 0;
+  border-bottom:1px solid #1c232d; font-size:2.1vh;
+}
+.rres .pl{font-weight:800; color:#7fd6a5; width:3.2vh; flex:0 0 auto; text-align:right}
+.rres .nr{color:#93a1b2; font-variant-numeric:tabular-nums; width:4.2vh; flex:0 0 auto; text-align:right}
+.rres .nv{
+  flex:1 1 auto; min-width:0; font-weight:700; padding-left:.8vw;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.rres .av{font-weight:800; font-variant-numeric:tabular-nums; flex:0 0 auto; padding-left:.6vw}
+.rres.gull{background:#123724; border-radius:.6vh; padding-left:.4vw; padding-right:.4vw}
+.rres.fersk .nv{color:#7fd6a5}
+.tom{font-size:2.2vh; color:#93a1b2; padding-top:3vh}
+.sistIMaal{
+  flex:0 0 auto; border-top:1px solid #232b36; margin-top:1vh; padding-top:1vh;
+  font-size:1.9vh; color:#93a1b2;
+}
+.sistIMaal b{color:#eef2f7}
+
+footer{
+  flex:0 0 auto; padding:1.2vh 2vw; border-top:1px solid #232b36;
+  display:flex; align-items:center; font-size:1.9vh; color:#93a1b2;
+}
+footer span{margin-right:2vw}
+.prikk{display:inline-block; width:1.6vh; height:1.6vh; border-radius:3px; margin-right:.6vw; vertical-align:middle}
+.p-hvit{background:#e8edf3}
+.p-oransje{background:#e07000}
+.p-lilla{background:#7141c8}
+.p-gronn{background:#12784a}
+footer .status{margin-left:auto; margin-right:0}
 .frakoblet{color:#f0684f}
 </style>
 </head>
@@ -74,13 +102,21 @@ tr.gull td{background:#123724}
   <img class="logo" src="logo.png" alt="Golia Vel">
   <span class="tittel" id="tittel">Godlia Rundt</span>
   <span class="tellere">
+    <span>Ikke startet <b id="tHvit">0</b></span>
     <span>Ute <b id="tUte">0</b></span>
     <span>I mål <b id="tMaal">0</b></span>
     <span id="tKlokke"><b>--:--</b></span>
   </span>
 </header>
 
-<main id="scene"><div class="tom">Kobler til...</div></main>
+<main id="scene">
+  <div class="venstre"><div id="rutenett"></div></div>
+  <div class="hoyre">
+    <h2 id="resTittel">Foreløpig resultat</h2>
+    <div class="liste" id="resListe"></div>
+    <div class="sistIMaal" id="sistIMaal"></div>
+  </div>
+</main>
 
 <footer>
   <span><span class="prikk p-hvit"></span>ikke startet</span>
@@ -98,18 +134,23 @@ var F = window.Felles;
 
 var lop = null;
 var feilTeller = 0;
-var scener = [];
-var sceneNr = 0;
-var laast = null;
+var grupper = [];      // hvilke lister resultatkolonnen veksler mellom
+var gruppeNr = 0;
+var sistFerdige = [];  // startnumre som var i mål ved forrige henting
 
+var laast = null;
 try{
   var q = new URLSearchParams(location.search);
   if (q.get('visning')) laast = q.get('visning');   // 'rutenett' eller 'resultat'
 }catch(e){}
 
+if (laast === 'rutenett') document.getElementById('scene').className = 'bareEn';
+else if (laast === 'resultat') document.getElementById('scene').className = 'bareResultat';
+
 function esc(s){
   return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
+function fornavn(n){ var s = String(n||'').trim(); return s ? s.split(/\s+/)[0] : ''; }
 
 /* Polling, ikke live-strom. TV-nettlesere handterer EventSource ujevnt, og
    tre sekunders forsinkelse er helt uten betydning paa en storskjerm. */
@@ -119,7 +160,11 @@ function hent(){
   xhr.onload = function(){
     try{
       var d = JSON.parse(xhr.responseText);
-      if (d && d.lop){ lop = d.lop; feilTeller = 0; byggScener(); tegn(); }
+      if (d && d.lop){
+        lop = d.lop; feilTeller = 0;
+        document.getElementById('status').innerHTML = '';
+        byggGrupper(); tegn();
+      }
     }catch(e){}
   };
   xhr.onerror = function(){
@@ -130,112 +175,133 @@ function hent(){
   xhr.send();
 }
 
-function byggScener(){
-  var nye = [{ type:'rutenett' }];
-  var sammenlagt = F.beregnResultater(lop);
-  if (sammenlagt.ferdige.length) nye.push({ type:'resultat', navn:null });
-
+/* Resultatkolonnen veksler mellom sammenlagt og de aldersgruppene som faktisk
+   har noen i mål. Rutenettet staar stille hele tiden. */
+function byggGrupper(){
+  var nye = [{ navn: null, pred: null }];
   F.alderGrupper(lop).forEach(function(g){
     var r = F.beregnResultater(lop, function(d){ return F.aldersgruppeFor(lop, d) === g.navn; });
-    if (r.ferdige.length) nye.push({ type:'resultat', navn:g.navn });
+    if (r.ferdige.length) nye.push({ navn: g.navn, pred: (function(navn){
+      return function(d){ return F.aldersgruppeFor(lop, d) === navn; };
+    })(g.navn) });
   });
-
-  if (laast === 'rutenett') nye = [{ type:'rutenett' }];
-  else if (laast === 'resultat') nye = nye.filter(function(s){ return s.type === 'resultat'; });
-  if (!nye.length) nye = [{ type:'rutenett' }];
-
-  // behold plassen i rotasjonen naar antallet scener endrer seg
-  if (sceneNr >= nye.length) sceneNr = 0;
-  scener = nye;
+  if (gruppeNr >= nye.length) gruppeNr = 0;
+  grupper = nye;
 }
 
 function tegn(){
   if (!lop) return;
   document.getElementById('tittel').textContent = lop.navn || 'Løpet';
 
-  var ute = 0, maal = 0;
+  var hvit = 0, ute = 0, maal = 0;
+  var ferdigeNaa = [];
   lop.deltakere.forEach(function(d){
     var t = F.tilstandFor(lop, d);
-    if (t.kode === 'gronn') maal++;
+    if (t.kode === 'gronn'){ maal++; ferdigeNaa.push(d.nr); }
     else if (t.kode === 'oransje' || t.kode === 'lilla') ute++;
+    else if (t.kode === 'hvit') hvit++;
   });
+  document.getElementById('tHvit').textContent = hvit;
   document.getElementById('tUte').textContent = ute;
   document.getElementById('tMaal').textContent = maal;
   var na = new Date();
   document.getElementById('tKlokke').innerHTML = '<b>' + F.toSiffer(na.getHours()) + ':' + F.toSiffer(na.getMinutes()) + '</b>';
 
-  var scene = scener[sceneNr] || { type:'rutenett' };
-  var boks = document.getElementById('scene');
+  // hvem er ny i mål siden forrige henting
+  var ferske = {};
+  ferdigeNaa.forEach(function(nr){ if (sistFerdige.indexOf(nr) < 0) ferske[nr] = 1; });
+  if (sistFerdige.length || ferdigeNaa.length) sistFerdige = ferdigeNaa;
 
-  if (scene.type === 'rutenett'){
-    if (!lop.deltakere.length){ boks.innerHTML = '<div class="tom">Ingen deltakere lagt inn ennå</div>'; return; }
-    var antall = lop.deltakere.length;
-    // fyll flata: omtrent 16:9, saa vi finner kolonnetallet ut fra antallet
-    var kol = Math.max(5, Math.round(Math.sqrt(antall * 16 / 9)));
-    var rader = Math.ceil(antall / kol);
-    var cellehoyde = Math.floor(80 / rader);   // i vh, main er cirka 82vh
-    var skrift = Math.max(1.6, Math.min(cellehoyde * 0.55, 6));
+  if (laast !== 'resultat') tegnRutenett();
+  if (laast !== 'rutenett') tegnResultat(ferske);
+}
 
-    var html = '<div id="rutenett" style="grid-template-columns:repeat(' + kol + ',1fr);'
-      + 'grid-auto-rows:minmax(0,1fr)">';
-    lop.deltakere.slice().sort(function(a,b){ return a.nr - b.nr; }).forEach(function(d){
-      var t = F.tilstandFor(lop, d);
-      var merke = t.kode === 'gronn' ? '✓'
-        : t.kode === 'dns' ? 'DNS' : t.kode === 'dnf' ? 'DNF'
-        : (t.kode === 'oransje' || t.kode === 'lilla') ? 'R' + t.paaRunde : '';
-      var fornavn = String(d.navn || '').trim().split(/\s+/)[0] || '';
-      // navnet vises bare når ruta er stor nok til at det blir lesbart
-      var navnSkrift = skrift * 0.34;
-      html += '<div class="rute r-' + t.kode + '" style="font-size:' + skrift.toFixed(1) + 'vh">'
-        + '<span>' + d.nr + '</span>'
-        + (fornavn && navnSkrift >= 1.1
-            ? '<span class="rnavn" style="font-size:' + navnSkrift.toFixed(1) + 'vh">' + esc(fornavn) + '</span>' : '')
-        + (merke ? '<span class="merke">' + merke + '</span>' : '') + '</div>';
-    });
-    boks.innerHTML = html + '</div>';
+function tegnRutenett(){
+  var boks = document.getElementById('rutenett');
+  if (!lop.deltakere.length){ boks.innerHTML = '<div class="tom">Ingen deltakere lagt inn ennå</div>'; return; }
+
+  var antall = lop.deltakere.length;
+  // kolonnetall ut fra den flata rutenettet faktisk har, ikke ut fra hele
+  // skjermen: kolonnen til høyre spiser en firedel av bredden
+  var bredde = boks.clientWidth || (window.innerWidth * 0.7);
+  var hoyde = boks.clientHeight || (window.innerHeight * 0.75);
+  var kol = Math.max(4, Math.round(Math.sqrt(antall * bredde / Math.max(hoyde, 200))));
+  var rader = Math.ceil(antall / kol);
+  var cellehoyde = Math.floor((hoyde / rader) * 100 / window.innerHeight);   // i vh
+  var skrift = Math.max(1.5, Math.min(cellehoyde * 0.48, 6));
+  var navnSkrift = skrift * 0.34;
+
+  var html = '';
+  lop.deltakere.slice().sort(function(a,b){ return a.nr - b.nr; }).forEach(function(d){
+    var t = F.tilstandFor(lop, d);
+    var merke = t.kode === 'gronn' ? '✓'
+      : t.kode === 'dns' ? 'DNS' : t.kode === 'dnf' ? 'DNF'
+      : (t.kode === 'oransje' || t.kode === 'lilla') ? 'R' + t.paaRunde : '';
+    var fn = fornavn(d.navn);
+    html += '<div class="rute r-' + t.kode + '" style="font-size:' + skrift.toFixed(1) + 'vh">'
+      + '<span>' + d.nr + '</span>'
+      + (fn && navnSkrift >= 1.1
+          ? '<span class="rnavn" style="font-size:' + navnSkrift.toFixed(1) + 'vh">' + esc(fn) + '</span>' : '')
+      + (merke ? '<span class="merke">' + merke + '</span>' : '') + '</div>';
+  });
+  boks.style.gridTemplateColumns = 'repeat(' + kol + ',1fr)';
+  boks.style.gridAutoRows = 'minmax(0,1fr)';
+  boks.style.gap = '0.7vh';
+  boks.innerHTML = html;
+}
+
+/* Ryttere som fortsatt er ute vises aldri med tider. Hele konkurransen hviler
+   paa at ingen kjenner sin egen rundetid underveis, og et tall paa veggen er
+   like avslorende som en som roper det. */
+function tegnResultat(ferske){
+  var g = grupper[gruppeNr] || { navn: null, pred: null };
+  var r = F.beregnResultater(lop, g.pred);
+
+  document.getElementById('resTittel').innerHTML = 'Foreløpig resultat · <b>'
+    + (g.navn ? esc(g.navn) : 'Sammenlagt') + '</b>'
+    + (grupper.length > 1 ? ' <span style="font-weight:400">(' + (gruppeNr+1) + '/' + grupper.length + ')</span>' : '');
+
+  var boks = document.getElementById('resListe');
+  if (!r.ferdige.length){
+    boks.innerHTML = '<div class="tom">Ingen i mål ennå</div>';
+    document.getElementById('sistIMaal').innerHTML = '';
     return;
   }
 
-  // resultat. Ryttere som fortsatt er ute vises aldri med tider: hele
-  // konkurransen hviler paa at ingen kjenner sin egen rundetid underveis.
-  var pred = scene.navn ? function(d){ return F.aldersgruppeFor(lop, d) === scene.navn; } : null;
-  var r = F.beregnResultater(lop, pred);
-  var antallRunder = Number(lop.antallRunder);
-  var h = '<h2>' + (scene.navn ? esc(scene.navn) : 'Sammenlagt') + '</h2>';
-  if (!r.ferdige.length){
-    h += '<div class="tom">Ingen i mål ennå</div>';
-  }else{
-    h += '<table><thead><tr><th class="tall">#</th><th>Navn</th><th class="tall">Nr</th>';
-    for (var i=0;i<antallRunder;i++) h += '<th class="tall">Runde ' + (i+1) + '</th>';
-    h += '<th class="tall">Avvik</th></tr></thead><tbody>';
-    r.ferdige.slice(0, 10).forEach(function(x){
-      h += '<tr class="' + (x.plass === 1 ? 'gull' : '') + '">'
-        + '<td class="plass">' + x.plass + '</td>'
-        + '<td>' + esc(x.d.navn || '') + '</td>'
-        + '<td class="tall">' + x.d.nr + '</td>';
-      for (var j=0;j<antallRunder;j++) h += '<td class="tall">' + F.varighet(x.runder[j], true) + '</td>';
-      h += '<td class="tall">' + F.sekTekst(x.avvik) + ' s</td></tr>';
-    });
-    h += '</tbody></table>';
-  }
-  boks.innerHTML = h;
+  var plass = Math.max(5, Math.floor(boks.clientHeight / (window.innerHeight * 0.038)));
+  boks.innerHTML = r.ferdige.slice(0, plass).map(function(x){
+    return '<div class="rres' + (x.plass === 1 ? ' gull' : '') + (ferske[x.d.nr] ? ' fersk' : '') + '">'
+      + '<span class="pl">' + x.plass + '</span>'
+      + '<span class="nr">' + x.d.nr + '</span>'
+      + '<span class="nv">' + esc(x.d.navn || '') + '</span>'
+      + '<span class="av">' + F.sekTekst(x.avvik) + ' s</span></div>';
+  }).join('');
+
+  // siste som kom i mål, i hele feltet
+  var sist = null, sistTid = -1;
+  lop.deltakere.forEach(function(d){
+    var t = F.tilstandFor(lop, d);
+    if (t.kode === 'gronn' && t.sisteTid > sistTid){ sistTid = t.sisteTid; sist = d; }
+  });
+  document.getElementById('sistIMaal').innerHTML = sist
+    ? 'Sist i mål: <b>' + esc(sist.navn || ('#' + sist.nr)) + '</b> (' + sist.nr + ')'
+    : '';
 }
 
-function nesteScene(){
-  if (scener.length > 1){ sceneNr = (sceneNr + 1) % scener.length; tegn(); }
+function nesteGruppe(){
+  if (grupper.length > 1){ gruppeNr = (gruppeNr + 1) % grupper.length; tegn(); }
 }
 
-/* Noen TV-er dimmer skjermen ved stillstand. Wake lock finnes sjelden der,
-   saa vi holder liv i sida ved aa tegne klokka hvert sekund uansett. */
 setInterval(hent, 3000);
 setInterval(tegn, 1000);
-setInterval(nesteScene, 15000);
+setInterval(nesteGruppe, 15000);
 hent();
 
 document.addEventListener('keydown', function(ev){
-  if (ev.key === 'ArrowRight' || ev.key === ' '){ ev.preventDefault(); nesteScene(); }
+  if (ev.key === 'ArrowRight' || ev.key === ' '){ ev.preventDefault(); nesteGruppe(); }
 });
-document.addEventListener('click', nesteScene);
+document.addEventListener('click', nesteGruppe);
+window.addEventListener('resize', function(){ tegn(); });
 
 })();
 </script>
