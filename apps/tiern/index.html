@@ -18,12 +18,19 @@
     --paper:#E7E9E3; --surface:#FBFBF8; --ink:#1B241F; --ink-soft:#5B655D;
     --line:#D2D6CC; --red:#B23A2E; --green:#3F6B4C; --gold:#C0883A;
     --filt:#1d4b3e; --filt-topp:#2a6353; --filt-bunn:#163a30; --paa-filt:#eef3f0;
+    /* Én definisjon av filten, brukt både av sida og av toppfeltet. Hadde
+       toppfeltet sin egen flate farge, ville det vist seg som en skjøt der
+       gradienten under allerede hadde mørknet. */
+    --filtduk:radial-gradient(120% 90% at 50% 0%, var(--filt-topp) 0%, var(--filt) 45%, var(--filt-bunn) 100%);
     --shadow:0 1px 0 rgba(27,36,31,.06), 0 10px 26px -16px rgba(0,0,0,.55);
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;padding:0}
+  /* Plass til rullefeltet alltid, ellers hopper hele sida noen piksler til
+     siden når man bytter til en fane som er kort nok til å slippe det. */
+  html{scrollbar-gutter:stable}
   body{
-    background:radial-gradient(120% 90% at 50% 0%, var(--filt-topp) 0%, var(--filt) 45%, var(--filt-bunn) 100%);
+    background:var(--filtduk);
     background-attachment:fixed;
     color:var(--ink);
     font-family:Inter,system-ui,sans-serif; font-variant-numeric:tabular-nums;
@@ -37,12 +44,13 @@
 
   /* Fanene ligger på egen linje under logoen. Sto de ved siden av, ble de
      til sammen bredere enn en telefon og hele sida kunne dras sidelengs. */
-  /* Toppfeltet ligger klistret øverst. Filten er festet til vinduet
-     (background-attachment:fixed), så øvre kant av gradienten er alltid
-     synlig der: en flat --filt-topp smelter derfor sammen med bakgrunnen
-     uansett hvor langt ned du har rullet. */
+  /* Toppfeltet maler NØYAKTIG samme duk som sida, også festet til vinduet.
+     Da treffer gradienten i toppfeltet de samme pikslene som bakgrunnen
+     ville malt der, og skjøten forsvinner. En flat farge her ga en synlig
+     kant, fordi gradienten under alt hadde mørknet nedover. */
   header.top{
-    position:sticky;top:0;z-index:20;background:var(--filt-topp);
+    position:sticky;top:0;z-index:20;
+    background:var(--filtduk);background-attachment:fixed;
     padding:calc(12px + env(safe-area-inset-top)) 0 8px;margin-bottom:4px;
     display:flex;flex-direction:column;gap:9px;
     border-bottom:1px solid rgba(238,243,240,.16);
