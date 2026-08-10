@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#E7E9E3">
+<title>10'ern</title>
+<link rel="icon" href="ikon.svg">
+<link rel="apple-touch-icon" href="ikon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#E7E9E3; --surface:#FBFBF8; --ink:#1B241F; --ink-soft:#5B655D;
+    --line:#D2D6CC; --red:#B23A2E; --green:#3F6B4C; --gold:#C0883A;
+    --shadow:0 1px 0 rgba(27,36,31,.06), 0 8px 24px -16px rgba(27,36,31,.4);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--paper); color:var(--ink);
+    font-family:Inter,system-ui,sans-serif; font-variant-numeric:tabular-nums;
+    -webkit-font-smoothing:antialiased; line-height:1.4;
+  }
+  .wrap{max-width:480px;margin:0 auto;min-height:100vh;padding:0 16px 130px}
+  h1,h2,h3{font-family:"Bricolage Grotesque",sans-serif;margin:0;letter-spacing:-.02em}
+
+  /* Fanene ligger på egen linje under logoen. Sto de ved siden av, ble de
+     til sammen bredere enn en telefon og hele sida kunne dras sidelengs. */
+  header.top{
+    position:sticky;top:0;z-index:20;background:var(--paper);
+    padding:calc(12px + env(safe-area-inset-top)) 0 8px;margin-bottom:4px;
+    display:flex;flex-direction:column;gap:9px;
+    border-bottom:1px solid var(--line);
+  }
+  .brand{font-family:"Bricolage Grotesque";font-weight:800;font-size:26px;letter-spacing:-.03em;cursor:pointer}
+  .brand .suit{color:var(--red)}
+  .topknapper{display:flex;gap:6px}
+  .menu-btn{
+    flex:1 1 0;min-width:0;
+    background:none;border:1px solid var(--line);border-radius:9px;
+    padding:9px 4px;font-size:12.5px;color:var(--ink-soft);font-weight:600;cursor:pointer;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .menu-btn:active{background:var(--surface)}
+  .menu-btn.aktiv{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:16px;
+    box-shadow:var(--shadow);padding:16px;margin:14px 0}
+  .eyebrow{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--ink-soft);margin-bottom:6px}
+
+  .pinput{display:flex;align-items:center;gap:10px;margin:8px 0}
+  .pdot{width:14px;height:14px;border-radius:50%;flex:none}
+  input.name{
+    flex:1;font-size:17px;font-family:Inter;font-weight:600;color:var(--ink);
+    background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:11px 12px;width:100%;
+  }
+  input.name:focus{outline:2px solid var(--gold);outline-offset:1px;border-color:var(--gold)}
+  .rm{background:none;border:none;color:var(--ink-soft);font-size:20px;padding:4px 8px;cursor:pointer}
+  .ghost-btn{width:100%;background:none;border:1.5px dashed var(--line);color:var(--ink-soft);
+    border-radius:11px;padding:12px;font-weight:600;font-size:15px;cursor:pointer;margin-top:6px}
+  .ghost-btn:active{background:var(--paper)}
+  .dealer-pick{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+  .chip{border:1px solid var(--line);background:var(--paper);border-radius:999px;padding:9px 14px;
+    font-weight:600;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;gap:7px}
+  .chip.sel{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+  .chip .pdot{width:10px;height:10px}
+
+  .primary{
+    position:fixed;left:0;right:0;bottom:0;z-index:30;
+    background:linear-gradient(to top,var(--paper) 60%,transparent);
+    padding:14px 16px calc(14px + env(safe-area-inset-bottom));
+  }
+  .primary .inner{max-width:480px;margin:0 auto}
+  .btn{width:100%;background:var(--ink);color:var(--surface);border:none;border-radius:13px;
+    padding:16px;font-size:17px;font-weight:700;font-family:"Bricolage Grotesque";letter-spacing:-.01em;
+    cursor:pointer;box-shadow:var(--shadow)}
+  .btn:disabled{background:#A7AEA6;box-shadow:none}
+  .btn.red{background:var(--red)}
+  .btn.lys{background:var(--paper);color:var(--ink);border:1px solid var(--line);box-shadow:none}
+  .btn:active:not(:disabled){transform:translateY(1px)}
+
+  .ladder{display:flex;align-items:flex-end;gap:2px;height:46px;margin:2px 0 4px}
+  .rung{flex:1;background:var(--line);border-radius:2px 2px 0 0;position:relative;min-width:0;transition:background .15s}
+  .rung.done{background:#AFC2B1}
+  .rung.now{background:var(--gold)}
+  .rung.blind{outline:1.5px solid var(--red);outline-offset:-1px}
+  .ladder-cap{display:flex;justify-content:space-between;font-size:10.5px;color:var(--ink-soft);
+    font-weight:600;letter-spacing:.04em;margin-top:2px}
+
+  .rhead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:2px}
+  .rtitle{font-family:"Bricolage Grotesque";font-weight:800;font-size:22px}
+  .rcards{font-size:13px;color:var(--ink-soft);font-weight:600}
+  .navbtn{background:var(--paper);border:1px solid var(--line);border-radius:9px;width:38px;height:38px;
+    font-size:18px;color:var(--ink);cursor:pointer;flex:none}
+  .navbtn:disabled{opacity:.35}
+  .deal-line{font-size:13px;color:var(--ink-soft);margin-top:2px}
+  .deal-line b{color:var(--ink)}
+
+  .trump{display:flex;gap:6px;align-items:center;margin:12px 0 2px;flex-wrap:wrap}
+  .trump .lab{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-soft)}
+  .suit-btn{width:38px;height:38px;border-radius:10px;border:1px solid var(--line);background:var(--paper);
+    font-size:20px;cursor:pointer;display:grid;place-items:center}
+  .suit-btn.sel{border-color:var(--ink);background:var(--surface);box-shadow:0 0 0 2px var(--ink) inset}
+  .suit-btn.r{color:var(--red)} .suit-btn.b{color:var(--ink)}
+
+  .prow{display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:10px;
+    padding:11px 0;border-top:1px solid var(--line)}
+  .prow:first-of-type{border-top:none}
+  /* Navnet og merket ligger på hver sin linje. Sto de ved siden av hverandre,
+     spiste "starter" hele plassen på smal skjerm og navnet forsvant helt. */
+  .pname{display:flex;flex-direction:column;gap:3px;min-width:0}
+  .pname .rad{display:flex;align-items:center;gap:9px;min-width:0}
+  .pname .pdot{width:11px;height:11px}
+  .pname .nvn{font-weight:600;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .lead-tag{font-size:10px;color:var(--gold);font-weight:700;border:1px solid var(--gold);
+    border-radius:5px;padding:1px 5px;letter-spacing:.04em;align-self:flex-start;
+    margin-left:20px;white-space:nowrap}
+  .stepper{display:flex;align-items:center;gap:0;background:var(--paper);border:1px solid var(--line);
+    border-radius:10px;overflow:hidden}
+  .stepper button{width:34px;height:38px;border:none;background:none;font-size:20px;color:var(--ink);cursor:pointer}
+  .stepper button:active{background:var(--line)}
+  .stepper .val{min-width:30px;text-align:center;font-weight:700;font-size:17px}
+  .col-lab{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);text-align:center}
+  .rowhead{display:grid;grid-template-columns:1fr auto auto;gap:10px;padding-bottom:4px}
+  .rowhead .b{width:104px;text-align:center}
+
+  .balance{display:flex;justify-content:space-between;align-items:center;margin-top:12px;
+    padding-top:11px;border-top:1px solid var(--line);font-size:13px;gap:8px}
+  .balance .tag{font-weight:700;padding:3px 9px;border-radius:7px;font-size:12.5px}
+  .tag.over{background:#F3DDD9;color:var(--red)}
+  .tag.under{background:#DCE8DE;color:var(--green)}
+  .tag.even{background:var(--line);color:var(--ink-soft)}
+  .trickwarn{font-size:12.5px;font-weight:600;white-space:nowrap}
+  .trickwarn.ok{color:var(--green)} .trickwarn.bad{color:var(--red)}
+
+  .stand .row{display:grid;grid-template-columns:24px 1fr auto;align-items:center;gap:10px;
+    padding:9px 0;border-top:1px solid var(--line)}
+  .stand .row:first-child{border-top:none}
+  .rank{font-family:"Bricolage Grotesque";font-weight:800;font-size:16px;color:var(--ink-soft);text-align:center}
+  .stand .nm{display:flex;align-items:center;gap:9px;font-weight:600;min-width:0}
+  .stand .nm span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .stand .pts{font-family:"Bricolage Grotesque";font-weight:800;font-size:20px}
+
+  .sheet-bg{position:fixed;inset:0;background:rgba(27,36,31,.35);z-index:40;display:none}
+  .sheet-bg.show{display:block}
+  .sheet{position:fixed;left:0;right:0;bottom:0;z-index:41;background:var(--surface);
+    border-radius:20px 20px 0 0;padding:18px 18px calc(22px + env(safe-area-inset-bottom));
+    max-width:480px;margin:0 auto;transform:translateY(100%);transition:transform .22s;box-shadow:var(--shadow);
+    max-height:88vh;overflow:auto}
+  .sheet.show{transform:translateY(0)}
+  .sheet h2{font-size:20px;margin-bottom:4px}
+  .srow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 0;border-top:1px solid var(--line)}
+  .srow:first-of-type{border-top:none}
+  .srow .k{font-weight:600}.srow .k small{display:block;color:var(--ink-soft);font-weight:400;font-size:12px}
+  .num-in{width:64px;text-align:center;font-weight:700;font-size:17px;padding:9px;border:1px solid var(--line);
+    border-radius:9px;background:var(--paper);color:var(--ink);font-family:Inter}
+  .link{background:none;border:none;color:var(--red);font-weight:700;font-size:15px;cursor:pointer;padding:12px 0}
+
+  .legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:10px;font-size:13px}
+  .legend i{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+  .winner{text-align:center;padding:8px 0 4px}
+  .winner .crown{font-size:30px}
+  .winner h2{font-size:30px;margin-top:2px}
+  .muted{color:var(--ink-soft);font-size:13px}
+  .center{text-align:center}
+
+  /* historikk og statistikk */
+  .kamp{border-top:1px solid var(--line);padding:12px 0;cursor:pointer}
+  .kamp:first-of-type{border-top:none}
+  .kamp-topp{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+  .kamp-dato{font-size:12.5px;color:var(--ink-soft);font-weight:600}
+  .kamp-vinner{font-weight:700;font-size:16px;display:flex;align-items:center;gap:8px;min-width:0}
+  .kamp-vinner span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .kamp-linje{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
+  .mini{font-size:12px;font-weight:600;background:var(--paper);border:1px solid var(--line);
+    border-radius:7px;padding:3px 8px;display:inline-flex;align-items:center;gap:5px}
+  .mini i{width:8px;height:8px;border-radius:50%;display:inline-block}
+  .tabell{width:100%;border-collapse:collapse;font-size:14px}
+  .tabell th{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--ink-soft);text-align:right;padding:0 0 7px}
+  .tabell th:first-child{text-align:left}
+  .tabell td{padding:9px 0;border-top:1px solid var(--line);text-align:right}
+  .tabell td:first-child{text-align:left;font-weight:600}
+  .tabell .navn{display:flex;align-items:center;gap:8px;min-width:0}
+  .tabell .navn span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .stor{font-family:"Bricolage Grotesque";font-weight:800;font-size:17px}
+  .tom{color:var(--ink-soft);font-size:14px;padding:14px 0;text-align:center;font-style:italic}
+  .feil{background:#F3DDD9;color:var(--red);border-radius:10px;padding:10px 12px;font-size:13.5px;
+    font-weight:600;margin:10px 0}
+  .drow{display:flex;align-items:center;gap:10px;padding:11px 0;border-top:1px solid var(--line)}
+  .drow:first-of-type{border-top:none}
+  .drow .navn{flex:1;font-weight:600;font-size:16px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand" id="brand">10<span class="suit">&#9824;</span>ern</div>
+    <div class="topknapper" id="topknapper"></div>
+  </header>
+  <main id="app"></main>
+</div>
+
+<div class="primary" id="footer"></div>
+
+<div class="sheet-bg" id="sheetBg"></div>
+<div class="sheet" id="sheet">
+  <h2>Poengregler</h2>
+  <p class="muted" style="margin:2px 0 8px">Endrer du disse, regnes alle runder om.</p>
+  <div class="srow">
+    <div class="k">Bonus ved riktig melding<small>Poeng = bonus + antall meldte stikk (f.eks. 10 + 3 = 13)</small></div>
+    <input class="num-in" id="setBase" type="number" inputmode="numeric">
+  </div>
+  <div class="srow">
+    <div class="k">Riktig null-melding<small>Meldt 0 og fikk 0 stikk</small></div>
+    <input class="num-in" id="setZero" type="number" inputmode="numeric">
+  </div>
+  <div class="srow">
+    <div class="k">Bom<small>Feil antall stikk mot melding</small></div>
+    <input class="num-in" id="setMiss" type="number" inputmode="numeric">
+  </div>
+  <div class="srow">
+    <div class="k">Slam-bonus<small>Meld og ta alle stikk på 8-, 9- og 10-kortsrunder</small></div>
+    <input class="num-in" id="setSlam" type="number" inputmode="numeric">
+  </div>
+  <button class="link" id="forkastBtn">Forkast kampen som pågår</button>
+  <button class="btn" id="closeSheet" style="margin-top:4px">Ferdig</button>
+</div>
+
+<script>
+"use strict";
+
+/* ---------- konstanter ---------- */
+const COLORS = ["#B23A2E","#2E6B8F","#C0883A","#3F6B4C","#7A4A86","#3A3A3A","#8F5B2E","#2E8F7B"];
+const SUITS = [
+  {k:"S",g:"♠",cls:"b"}, {k:"H",g:"♥",cls:"r"},
+  {k:"D",g:"♦",cls:"r"}, {k:"C",g:"♣",cls:"b"}
+];
+const SEQ = (()=>{const a=[];for(let i=10;i>=1;i--)a.push(i);for(let i=1;i<=10;i++)a.push(i);return a;})();
+
+/* ---------- tilstand ---------- */
+let DATA = null;          // alt fra serveren
+let S = null;             // snarvei til DATA.aktivtSpill
+let skjerm = "spill";     // spill | historikk | statistikk | deltakere
+let viewRound = 0;
+let valgtKamp = null;     // created-id på kampen som er utvidet i historikken
+let feilmelding = "";
+let oppsett = null;       // midlertidig oppsett før kampen starter
+
+const app = document.getElementById("app");
+const footer = document.getElementById("footer");
+const topknapper = document.getElementById("topknapper");
+
+/* ---------- server ---------- */
+async function hent(){
+  const r = await fetch("api/tilstand", {cache:"no-store"});
+  DATA = await r.json();
+  S = DATA.aktivtSpill;
+  return DATA;
+}
+/* behold=true betyr at VI eier det aktive spillet: da beholder vi objektet vårt
+   i stedet for å bytte det ut med serverens kopi.
+   Uten dette forsvant trykk: knappene i en tegnet runde peker inn i det
+   spillobjektet som var der da de ble tegnet. Byttet vi ut S under føttene på
+   dem etter en lagring, satte "Fullfør runde" confirmed på et objekt ingen
+   sendte videre, og runden ble borte. */
+async function send(sti, kropp, behold){
+  feilmelding = "";
+  try{
+    const r = await fetch("api/" + sti, {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify(kropp || {})
+    });
+    const d = await r.json();
+    if(!r.ok){ feilmelding = d.feil || "Noe gikk galt"; tegn(); return null; }
+    DATA = d;
+    if(behold && S){ DATA.aktivtSpill = S; }
+    else { S = DATA.aktivtSpill; }
+    return d;
+  }catch(e){
+    feilmelding = "Fikk ikke kontakt med serveren. Prøv igjen.";
+    tegn(); return null;
+  }
+}
+/* Lagring av selve spillet skjer ofte (hvert trykk på pluss og minus), så vi
+   samler opp og sender når fingeren har vært i ro et halvt sekund. Ellers
+   sender vi tjue forespørsler mens noen teller stikk. */
+let lagreTimer = null;
+function lagreSpill(){
+  clearTimeout(lagreTimer);
+  lagreTimer = setTimeout(()=>{ send("spill", {spill:S}, true); }, 500);
+}
+function lagreSpillNaa(){
+  clearTimeout(lagreTimer);
+  return send("spill", {spill:S}, true);
+}
+
+/* ---------- poeng ---------- */
+function scoring(){ return (S && S.scoring) || DATA.innstillinger; }
+function isSlam(round, pi, sp){
+  sp = sp || S;
+  return round.bids[pi]===round.cards && round.tricks[pi]===round.cards && round.cards>=8;
+}
+function roundScore(round, pi, sp){
+  sp = sp || S;
+  const sc = sp.scoring || DATA.innstillinger;
+  const b = round.bids[pi], t = round.tricks[pi];
+  if(b !== t) return sc.miss;
+  let pts = (b === 0) ? sc.zero : sc.base + b;
+  if(isSlam(round, pi, sp)) pts += sc.slam;
+  return pts;
+}
+function totalFor(sp, pi){
+  let s=0;
+  sp.rounds.forEach(r=>{ if(r.confirmed) s += roundScore(r, pi, sp); });
+  return s;
+}
+function total(pi){ return totalFor(S, pi); }
+function dealerOf(r){ return (S.firstDealer + r) % S.players.length; }
+function leaderOf(r){ return (dealerOf(r)+1) % S.players.length; }
+function firstUnconfirmed(){
+  for(let r=0;r<S.rounds.length;r++) if(!S.rounds[r].confirmed) return r;
+  return S.rounds.length;
+}
+function allDone(sp){ sp = sp || S; return sp.rounds.every(r=>r.confirmed); }
+function vinnereAv(sp){
+  const t = sp.players.map((p,i)=>totalFor(sp,i));
+  const maks = Math.max.apply(null, t);
+  return sp.players.map((p,i)=>i).filter(i=>t[i]===maks);
+}
+
+/* ---------- tegning ---------- */
+function tegn(){
+  const faner = [
+    {id:"spill", navn:"Spill"},
+    {id:"historikk", navn:"Historikk"},
+    {id:"statistikk", navn:"Statistikk"},
+    {id:"deltakere", navn:"Spillere"}
+  ];
+  topknapper.innerHTML = faner.map(f=>
+    `<button class="menu-btn ${skjerm===f.id?"aktiv":""}" data-fane="${f.id}">${f.navn}</button>`
+  ).join("");
+  topknapper.querySelectorAll("[data-fane]").forEach(b=>b.addEventListener("click",()=>{
+    skjerm = b.dataset.fane; valgtKamp = null; feilmelding = "";
+    window.scrollTo(0,0); tegn();
+  }));
+
+  const varsel = feilmelding ? `<div class="feil">${escapeHtml(feilmelding)}</div>` : "";
+
+  if(skjerm==="historikk") return tegnHistorikk(varsel);
+  if(skjerm==="statistikk") return tegnStatistikk(varsel);
+  if(skjerm==="deltakere") return tegnDeltakere(varsel);
+
+  if(!S) return tegnOppsett(varsel);
+  if(allDone()) return tegnSammendrag(varsel);
+  return tegnSpill(varsel);
+}
+
+/* ----- OPPSETT ----- */
+function tegnOppsett(varsel){
+  if(!oppsett) oppsett = {valgte:[], ekstra:[], firstDealer:0};
+  const o = oppsett;
+
+  const faste = DATA.deltakere.map(d=>{
+    const valgt = o.valgte.includes(d.id);
+    return `<button class="chip ${valgt?"sel":""}" data-velg="${d.id}">
+      <span class="pdot" style="background:${d.farge}"></span>${escapeHtml(d.navn)}</button>`;
+  }).join("");
+
+  const spillere = spillereIOppsett();
+  const dealerChips = spillere.map((p,i)=>
+    `<button class="chip ${o.firstDealer===i?"sel":""}" data-dealer="${i}">
+      <span class="pdot" style="background:${p.color}"></span>${escapeHtml(p.name)}</button>`
+  ).join("");
+
+  const ekstraRader = o.ekstra.map((n,i)=>`
+    <div class="pinput">
+      <span class="pdot" style="background:${COLORS[(DATA.deltakere.length+i)%COLORS.length]}"></span>
+      <input class="name" data-ekstra="${i}" placeholder="Gjest ${i+1}" value="${escapeHtml(n)}" maxlength="14">
+      <button class="rm" data-rm-ekstra="${i}">&times;</button>
+    </div>`).join("");
+
+  app.innerHTML = varsel + `
+    <div class="card">
+      <div class="eyebrow">Hvem spiller?</div>
+      ${DATA.deltakere.length
+        ? `<div class="dealer-pick">${faste}</div>`
+        : `<p class="muted" style="margin:2px 0 8px">Ingen faste spillere ennå. Legg dem inn under Spillere, så slipper du å skrive navn hver gang.</p>`}
+      ${ekstraRader}
+      <button class="ghost-btn" id="addGjest">+ Legg til gjest for denne kampen</button>
+    </div>
+
+    ${spillere.length>=2 ? `<div class="card">
+      <div class="eyebrow">Hvem deler først?</div>
+      <p class="muted" style="margin:0 0 4px">Spilleren til venstre for giver starter runden, ofte en fordel.</p>
+      <div class="dealer-pick">${dealerChips}</div>
+    </div>` : ""}
+
+    <p class="muted center" style="margin:6px 4px">Rekka spilles 10 &rarr; 1 &rarr; 1 &rarr; 10. To blinde 1-kortsrunder i bunnen.</p>
+  `;
+
+  footer.innerHTML = `<div class="inner">
+    <button class="btn" id="startBtn" ${spillere.length>=2?"":"disabled"}>
+      ${spillere.length>=2 ? "Start kampen med "+spillere.length+" spillere" : "Velg minst to spillere"}
+    </button></div>`;
+
+  app.querySelectorAll("[data-velg]").forEach(b=>b.addEventListener("click",()=>{
+    const id=b.dataset.velg, i=o.valgte.indexOf(id);
+    if(i>=0) o.valgte.splice(i,1); else o.valgte.push(id);
+    if(o.firstDealer>=spillereIOppsett().length) o.firstDealer=0;
+    tegn();
+  }));
+  app.querySelectorAll("[data-ekstra]").forEach(inp=>inp.addEventListener("input",e=>{
+    o.ekstra[+e.target.dataset.ekstra]=e.target.value;
+    document.getElementById("startBtn").disabled = spillereIOppsett().length<2;
+  }));
+  app.querySelectorAll("[data-rm-ekstra]").forEach(b=>b.addEventListener("click",()=>{
+    o.ekstra.splice(+b.dataset.rmEkstra,1); if(o.firstDealer>0)o.firstDealer=0; tegn();
+  }));
+  document.getElementById("addGjest").addEventListener("click",()=>{ o.ekstra.push(""); tegn(); });
+  app.querySelectorAll("[data-dealer]").forEach(b=>b.addEventListener("click",()=>{
+    o.firstDealer=+b.dataset.dealer; tegn();
+  }));
+  document.getElementById("startBtn").addEventListener("click", startKamp);
+}
+
+function spillereIOppsett(){
+  const o = oppsett;
+  const fra = o.valgte.map(id=>{
+    const d = DATA.deltakere.find(x=>x.id===id);
+    return d ? {name:d.navn, color:d.farge, id:d.id} : null;
+  }).filter(Boolean);
+  o.ekstra.forEach((n,i)=>{
+    if(n.trim()) fra.push({name:n.trim(), color:COLORS[(DATA.deltakere.length+i)%COLORS.length], id:null});
+  });
+  return fra;
+}
+
+async function startKamp(){
+  const spillere = spillereIOppsett();
+  if(spillere.length<2) return;
+  const spill = {
+    players: spillere,
+    firstDealer: Math.min(oppsett.firstDealer, spillere.length-1),
+    scoring: Object.assign({}, DATA.innstillinger),
+    rounds: SEQ.map(c=>({cards:c, trump:null, confirmed:false,
+      bids: spillere.map(()=>0), tricks: spillere.map(()=>0)})),
+    created: Date.now()
+  };
+  S = spill;
+  const ok = await send("spill", {spill});
+  if(!ok) return;
+  oppsett = null; viewRound = 0; skjerm = "spill";
+  window.scrollTo(0,0); tegn();
+}
+
+/* ----- STIGE ----- */
+function ladderHtml(){
+  const rungs = S.rounds.map((r,i)=>{
+    const h = Math.round(18 + (r.cards/10)*82);
+    let cls="rung";
+    if(r.confirmed)cls+=" done";
+    if(i===viewRound)cls+=" now";
+    if(r.cards===1)cls+=" blind";
+    return `<div class="${cls}" style="height:${h}%" title="Runde ${i+1}: ${r.cards} kort"></div>`;
+  }).join("");
+  return `<div class="ladder">${rungs}</div>
+    <div class="ladder-cap"><span>10 kort</span><span>blind</span><span>10 kort</span></div>`;
+}
+
+/* ----- SPILL ----- */
+function tegnSpill(varsel){
+  const r = S.rounds[viewRound];
+  const dealer = dealerOf(viewRound), lead = leaderOf(viewRound);
+  const done = S.rounds.filter(x=>x.confirmed).length;
+
+  const trumpBtns = SUITS.map(su=>
+    `<button class="suit-btn ${su.cls} ${r.trump===su.k?"sel":""}" data-trump="${su.k}">${su.g}</button>`
+  ).join("");
+
+  const prows = S.players.map((p,pi)=>{
+    const isLead = pi===lead;
+    const slam = isSlam(r,pi);
+    return `
+    <div class="prow">
+      <div class="pname">
+        <div class="rad">
+          <span class="pdot" style="background:${p.color}"></span>
+          <span class="nvn">${escapeHtml(p.name)}</span>
+        </div>
+        ${slam?`<span class="lead-tag">slam +${scoring().slam}</span>`:(isLead?`<span class="lead-tag">starter</span>`:"")}
+      </div>
+      ${stepper("bid",pi,r.bids[pi])}
+      ${stepper("trick",pi,r.tricks[pi])}
+    </div>`;
+  }).join("");
+
+  const bidSum = r.bids.reduce((a,b)=>a+b,0);
+  const trickSum = r.tricks.reduce((a,b)=>a+b,0);
+  let balTag, balTxt;
+  if(bidSum>r.cards){balTag="over";balTxt="Overmeldt";}
+  else if(bidSum<r.cards){balTag="under";balTxt="Undermeldt";}
+  else{balTag="even";balTxt="I balanse";}
+  const trickOk = trickSum===r.cards;
+
+  const order=[...S.players.keys()].sort((a,b)=>total(b)-total(a));
+  const stand = order.map((pi,idx)=>`
+    <div class="row">
+      <div class="rank">${idx+1}</div>
+      <div class="nm"><span class="pdot" style="background:${S.players[pi].color};width:11px;height:11px"></span><span>${escapeHtml(S.players[pi].name)}</span></div>
+      <div class="pts">${total(pi)}</div>
+    </div>`).join("");
+
+  app.innerHTML = varsel + `
+    <div class="card" style="padding-bottom:12px">
+      <div class="rhead">
+        <div>
+          <div class="rtitle">Runde ${viewRound+1}<span class="rcards"> / 20</span></div>
+          <div class="rcards">${r.cards} kort${r.cards===1?" · blindrunde (kort i panna)":""}</div>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="navbtn" id="prevR" ${viewRound===0?"disabled":""}>&#8249;</button>
+          <button class="navbtn" id="nextR" ${viewRound>=S.rounds.length-1 || !r.confirmed?"disabled":""}>&#8250;</button>
+        </div>
+      </div>
+      <div class="deal-line"><b>${escapeHtml(S.players[dealer].name)}</b> deler &middot; <b>${escapeHtml(S.players[lead].name)}</b> starter</div>
+      ${ladderHtml()}
+      <div class="trump">
+        <span class="lab">Trumf</span>
+        ${trumpBtns}
+        <button class="suit-btn ${r.trump===null?"sel":""}" data-trump="none" style="font-size:13px;width:auto;padding:0 10px">&minus;</button>
+      </div>
+
+      <div class="rowhead" style="margin-top:14px">
+        <div class="a"></div>
+        <div class="b"><span class="col-lab">Meldt</span></div>
+        <div class="b"><span class="col-lab">Stikk</span></div>
+      </div>
+      ${prows}
+
+      <div class="balance">
+        <span class="tag ${balTag}">${balTxt}</span>
+        <span class="trickwarn ${trickOk?"ok":"bad"}">Stikk: ${trickSum}/${r.cards}</span>
+      </div>
+    </div>
+
+    <div class="card stand">
+      <div class="eyebrow">Stilling &middot; ${done}/20 runder ferdig</div>
+      ${stand}
+    </div>
+  `;
+
+  footer.innerHTML = `<div class="inner">
+    <button class="btn" id="confirmR" ${trickOk?"":"disabled"}>${r.confirmed?"Lagre endring":"Fullfør runde"}</button>
+  </div>`;
+
+  app.querySelectorAll("[data-step]").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      const kind=btn.dataset.step, pi=+btn.dataset.pi, dir=+btn.dataset.dir;
+      const arr = kind==="bid"? r.bids : r.tricks;
+      arr[pi]=Math.max(0,Math.min(r.cards,arr[pi]+dir));
+      lagreSpill(); tegn();
+    });
+  });
+  app.querySelectorAll("[data-trump]").forEach(b=>b.addEventListener("click",()=>{
+    const t=b.dataset.trump; r.trump = t==="none"?null:t; lagreSpill(); tegn();
+  }));
+  document.getElementById("prevR").addEventListener("click",()=>{if(viewRound>0){viewRound--;tegn();}});
+  const nextB=document.getElementById("nextR");
+  if(nextB&&!nextB.disabled)nextB.addEventListener("click",()=>{if(viewRound<S.rounds.length-1){viewRound++;tegn();}});
+  document.getElementById("confirmR").addEventListener("click",async ()=>{
+    if(!trickOk)return;
+    r.confirmed=true;
+    await lagreSpillNaa();
+    if(!allDone()){
+      const nxt=firstUnconfirmed();
+      viewRound = nxt<S.rounds.length? nxt : viewRound;
+    }
+    window.scrollTo(0,0); tegn();
+  });
+}
+
+function stepper(kind,pi,val){
+  return `<div class="stepper">
+    <button data-step="${kind}" data-pi="${pi}" data-dir="-1">&minus;</button>
+    <span class="val">${val}</span>
+    <button data-step="${kind}" data-pi="${pi}" data-dir="1">+</button>
+  </div>`;
+}
+
+/* ----- SAMMENDRAG ----- */
+function tegnSammendrag(varsel){
+  const order=[...S.players.keys()].sort((a,b)=>total(b)-total(a));
+  const vinnere = vinnereAv(S);
+
+  const statRows = order.map(pi=>{
+    const s = spillerStatIKamp(S, pi);
+    return `<div class="row" style="grid-template-columns:1fr auto auto auto">
+      <div class="nm"><span class="pdot" style="background:${S.players[pi].color};width:11px;height:11px"></span><span>${escapeHtml(S.players[pi].name)}</span></div>
+      <div class="muted" style="width:62px;text-align:right">${s.treffProsent}% treff</div>
+      <div class="muted" style="width:64px;text-align:right">${s.nuller} nuller</div>
+      <div class="pts" style="width:54px;text-align:right">${total(pi)}</div>
+    </div>`;
+  }).join("");
+
+  app.innerHTML = varsel + `
+    <div class="card winner">
+      <div class="crown">♛</div>
+      <div class="eyebrow">${vinnere.length>1?"Delt seier":"Vinner"}</div>
+      <h2>${vinnere.map(w=>escapeHtml(S.players[w].name)).join(" & ")}</h2>
+      <div class="muted">${total(vinnere[0])} poeng</div>
+    </div>
+    <div class="card">
+      <div class="eyebrow">Poengutvikling</div>
+      ${chartSvg(S)}
+      <div class="legend">${S.players.map(p=>`<span><i style="background:${p.color}"></i>${escapeHtml(p.name)}</span>`).join("")}</div>
+    </div>
+    <div class="card stand">
+      <div class="eyebrow">Sluttstatistikk</div>
+      ${statRows}
+    </div>
+    <p class="muted center" style="margin:6px 4px">Lagrer du kampen, havner den i historikken og teller med i statistikken.</p>
+  `;
+  footer.innerHTML = `<div class="inner" style="display:flex;gap:10px">
+    <button class="btn lys" id="backPlay">Rediger runder</button>
+    <button class="btn" id="lagreKamp">Lagre kampen</button>
+  </div>`;
+  document.getElementById("backPlay").addEventListener("click",()=>{viewRound=S.rounds.length-1;tegn();});
+  document.getElementById("lagreKamp").addEventListener("click",async ()=>{
+    const ok = await send("avslutt");
+    if(!ok) return;
+    skjerm="historikk"; oppsett=null; window.scrollTo(0,0); tegn();
+  });
+}
+
+/* ----- HISTORIKK ----- */
+function tegnHistorikk(varsel){
+  footer.innerHTML = DATA.aktivtSpill
+    ? `<div class="inner"><button class="btn" id="tilSpill">Tilbake til kampen som pågår</button></div>`
+    : `<div class="inner"><button class="btn" id="nyKamp">Start ny kamp</button></div>`;
+
+  if(!DATA.historikk.length){
+    app.innerHTML = varsel + `<div class="card"><div class="eyebrow">Historikk</div>
+      <p class="tom">Ingen ferdigspilte kamper ennå. Når en kamp er lagret, havner den her.</p></div>`;
+  }else{
+    const kamper = DATA.historikk.map(sp=>{
+      const vinnere = vinnereAv(sp);
+      const order=[...sp.players.keys()].sort((a,b)=>totalFor(sp,b)-totalFor(sp,a));
+      const utvidet = valgtKamp === String(sp.created);
+      const runder = sp.rounds.filter(r=>r.confirmed).length;
+      return `<div class="kamp" data-kamp="${sp.created}">
+        <div class="kamp-topp">
+          <div class="kamp-vinner">
+            <span class="pdot" style="background:${sp.players[vinnere[0]].color}"></span>
+            <span>${vinnere.map(w=>escapeHtml(sp.players[w].name)).join(" & ")}</span>
+          </div>
+          <div class="kamp-dato">${datoTekst(sp.avsluttet||sp.created)}</div>
+        </div>
+        <div class="kamp-linje">
+          ${order.map(pi=>`<span class="mini"><i style="background:${sp.players[pi].color}"></i>${escapeHtml(sp.players[pi].name)} ${totalFor(sp,pi)}</span>`).join("")}
+        </div>
+        ${utvidet ? `
+          <div style="margin-top:12px">
+            ${chartSvg(sp)}
+            <div class="muted" style="margin-top:8px">${runder} runder spilt${runder<20?" (avbrutt)":""}</div>
+            <button class="link" data-slett="${sp.created}">Slett denne kampen</button>
+          </div>` : ""}
+      </div>`;
+    }).join("");
+    app.innerHTML = varsel + `<div class="card">
+      <div class="eyebrow">Historikk &middot; ${DATA.historikk.length} kamper</div>
+      ${kamper}
+      <p class="muted center" style="margin-top:10px">Trykk på en kamp for å se poengutviklingen.</p>
+    </div>`;
+  }
+
+  app.querySelectorAll("[data-kamp]").forEach(k=>k.addEventListener("click",e=>{
+    if(e.target.closest("[data-slett]")) return;
+    const id = k.dataset.kamp;
+    valgtKamp = (valgtKamp===id) ? null : id;
+    tegn();
+  }));
+  app.querySelectorAll("[data-slett]").forEach(b=>b.addEventListener("click",async e=>{
+    e.stopPropagation();
+    if(!confirm("Slette denne kampen fra historikken?")) return;
+    await send("historikk/slett", {created: b.dataset.slett});
+    valgtKamp = null; tegn();
+  }));
+  const t=document.getElementById("tilSpill");
+  if(t) t.addEventListener("click",()=>{ skjerm="spill"; viewRound=Math.min(firstUnconfirmed(),S.rounds.length-1); window.scrollTo(0,0); tegn(); });
+  const n=document.getElementById("nyKamp");
+  if(n) n.addEventListener("click",()=>{ skjerm="spill"; oppsett=null; window.scrollTo(0,0); tegn(); });
+}
+
+/* ----- STATISTIKK ----- */
+function spillerStatIKamp(sp, pi){
+  let treff=0, nuller=0, runder=0, slam=0;
+  sp.rounds.forEach(r=>{
+    if(!r.confirmed) return;
+    runder++;
+    if(r.bids[pi]===r.tricks[pi]){ treff++; if(r.bids[pi]===0) nuller++; }
+    if(isSlam(r,pi,sp)) slam++;
+  });
+  return {treff, nuller, runder, slam, treffProsent: runder?Math.round(treff/runder*100):0};
+}
+
+/* Statistikk slås sammen på NAVN, ikke på id. En gjest som senere blir fast
+   spiller skal ikke få to rader, og gamle kamper har uansett bare navnet. */
+function samletStatistikk(){
+  const per = {};
+  function sikre(navn, farge){
+    const n = navn.trim();
+    if(!per[n]) per[n] = {navn:n, farge:farge, kamper:0, seire:0, poengSum:0,
+      beste:null, treff:0, runder:0, nuller:0, slam:0};
+    return per[n];
+  }
+  DATA.historikk.forEach(sp=>{
+    const vinnere = vinnereAv(sp);
+    sp.players.forEach((p,pi)=>{
+      const s = sikre(p.name, p.color);
+      const poeng = totalFor(sp, pi);
+      const st = spillerStatIKamp(sp, pi);
+      s.kamper++;
+      s.poengSum += poeng;
+      if(vinnere.includes(pi)) s.seire++;
+      if(s.beste===null || poeng>s.beste) s.beste = poeng;
+      s.treff += st.treff; s.runder += st.runder; s.nuller += st.nuller; s.slam += st.slam;
+    });
+  });
+  return Object.values(per).map(s=>({
+    ...s,
+    snitt: s.kamper ? Math.round(s.poengSum/s.kamper) : 0,
+    treffProsent: s.runder ? Math.round(s.treff/s.runder*100) : 0,
+    seiersProsent: s.kamper ? Math.round(s.seire/s.kamper*100) : 0
+  }));
+}
+
+let statSortering = "seire";
+function tegnStatistikk(varsel){
+  footer.innerHTML = DATA.aktivtSpill
+    ? `<div class="inner"><button class="btn" id="tilSpill2">Tilbake til kampen som pågår</button></div>`
+    : `<div class="inner"><button class="btn" id="nyKamp2">Start ny kamp</button></div>`;
+
+  const stat = samletStatistikk();
+  if(!stat.length){
+    app.innerHTML = varsel + `<div class="card"><div class="eyebrow">Statistikk</div>
+      <p class="tom">Statistikken fylles ut etter hvert som kamper lagres.</p></div>`;
+  }else{
+    const sorter = {
+      seire:(a,b)=>b.seire-a.seire || b.snitt-a.snitt,
+      snitt:(a,b)=>b.snitt-a.snitt,
+      treff:(a,b)=>b.treffProsent-a.treffProsent,
+      kamper:(a,b)=>b.kamper-a.kamper
+    };
+    const rader = stat.slice().sort(sorter[statSortering]).map(s=>`
+      <tr>
+        <td><div class="navn"><span class="pdot" style="background:${s.farge};width:11px;height:11px"></span><span>${escapeHtml(s.navn)}</span></div></td>
+        <td>${s.kamper}</td>
+        <td class="stor">${s.seire}</td>
+        <td>${s.snitt}</td>
+        <td>${s.treffProsent}%</td>
+      </tr>`).join("");
+
+    const flest = stat.slice().sort((a,b)=>b.seire-a.seire)[0];
+    const beste = stat.slice().sort((a,b)=>(b.beste||0)-(a.beste||0))[0];
+    const skarpest = stat.slice().sort((a,b)=>b.treffProsent-a.treffProsent)[0];
+    const totaltSlam = stat.reduce((a,s)=>a+s.slam,0);
+
+    app.innerHTML = varsel + `
+      <div class="card">
+        <div class="eyebrow">Gjennom ${DATA.historikk.length} kamper</div>
+        <div class="drow"><div class="navn">Flest seire</div>
+          <div class="stor">${escapeHtml(flest.navn)} &middot; ${flest.seire}</div></div>
+        <div class="drow"><div class="navn">Høyeste poengsum</div>
+          <div class="stor">${escapeHtml(beste.navn)} &middot; ${beste.beste}</div></div>
+        <div class="drow"><div class="navn">Skarpeste melder</div>
+          <div class="stor">${escapeHtml(skarpest.navn)} &middot; ${skarpest.treffProsent}%</div></div>
+        ${totaltSlam?`<div class="drow"><div class="navn">Slam totalt</div><div class="stor">${totaltSlam}</div></div>`:""}
+      </div>
+
+      <div class="card">
+        <div class="eyebrow">Alle spillere</div>
+        <div class="dealer-pick" style="margin-bottom:12px">
+          ${[["seire","Seire"],["snitt","Snitt"],["treff","Treff%"],["kamper","Kamper"]].map(([k,n])=>
+            `<button class="chip ${statSortering===k?"sel":""}" data-sort="${k}">${n}</button>`).join("")}
+        </div>
+        <table class="tabell">
+          <thead><tr><th>Spiller</th><th>Kamper</th><th>Seire</th><th>Snitt</th><th>Treff</th></tr></thead>
+          <tbody>${rader}</tbody>
+        </table>
+        <p class="muted" style="margin-top:12px">Treff er hvor ofte meldingen stemte med antall stikk. Snitt er poeng per kamp.</p>
+      </div>`;
+
+    app.querySelectorAll("[data-sort]").forEach(b=>b.addEventListener("click",()=>{
+      statSortering = b.dataset.sort; tegn();
+    }));
+  }
+  const t=document.getElementById("tilSpill2");
+  if(t) t.addEventListener("click",()=>{ skjerm="spill"; window.scrollTo(0,0); tegn(); });
+  const n=document.getElementById("nyKamp2");
+  if(n) n.addEventListener("click",()=>{ skjerm="spill"; oppsett=null; window.scrollTo(0,0); tegn(); });
+}
+
+/* ----- FASTE DELTAKERE ----- */
+function tegnDeltakere(varsel){
+  const rader = DATA.deltakere.length
+    ? DATA.deltakere.map(d=>`
+      <div class="drow">
+        <span class="pdot" style="background:${d.farge}"></span>
+        <div class="navn">${escapeHtml(d.navn)}</div>
+        <button class="rm" data-slett-d="${d.id}">&times;</button>
+      </div>`).join("")
+    : `<p class="tom">Ingen faste spillere ennå.</p>`;
+
+  app.innerHTML = varsel + `
+    <div class="card">
+      <div class="eyebrow">Faste spillere</div>
+      <p class="muted" style="margin:0 0 10px">De du spiller med ofte. Da slipper du å skrive navn hver gang, og fargen følger dem fra kamp til kamp.</p>
+      ${rader}
+      <div class="pinput" style="margin-top:12px">
+        <input class="name" id="nyDeltaker" placeholder="Navn" maxlength="20" autocomplete="off">
+      </div>
+      <button class="ghost-btn" id="leggTilFast">+ Legg til fast deltaker</button>
+    </div>
+    <p class="muted center" style="margin:6px 4px">Sletter du en fast spiller, blir kamper og statistikk stående. De regnes på navn.</p>`;
+
+  footer.innerHTML = `<div class="inner"><button class="btn lys" id="tilbake">Tilbake</button></div>`;
+
+  async function leggTil(){
+    const inp = document.getElementById("nyDeltaker");
+    const navn = inp.value.trim();
+    if(!navn) { inp.focus(); return; }
+    const ok = await send("deltaker", {navn});
+    if(ok){ tegn(); setTimeout(()=>{ const i=document.getElementById("nyDeltaker"); if(i) i.focus(); },0); }
+  }
+  document.getElementById("leggTilFast").addEventListener("click", leggTil);
+  document.getElementById("nyDeltaker").addEventListener("keydown",e=>{
+    if(e.key==="Enter"){ e.preventDefault(); leggTil(); }
+  });
+  app.querySelectorAll("[data-slett-d]").forEach(b=>b.addEventListener("click",async ()=>{
+    const d = DATA.deltakere.find(x=>x.id===b.dataset.slettD);
+    if(!confirm("Fjerne " + (d?d.navn:"denne spilleren") + " fra faste spillere?")) return;
+    await send("deltaker/slett", {id:b.dataset.slettD});
+    tegn();
+  }));
+  document.getElementById("tilbake").addEventListener("click",()=>{ skjerm="spill"; window.scrollTo(0,0); tegn(); });
+}
+
+/* ----- graf ----- */
+function chartSvg(sp){
+  const W=420,H=180, PL=8,PT=10,PR=8,PB=8;
+  const xs = sp.rounds.filter(r=>r.confirmed).length;
+  const series = sp.players.map((p,pi)=>{
+    const pts=[]; let cum=0;
+    sp.rounds.forEach(r=>{ if(r.confirmed){ cum+=roundScore(r,pi,sp); pts.push(cum); } });
+    return pts;
+  });
+  let maxY=1, minY=0;
+  series.forEach(s=>s.forEach(v=>{maxY=Math.max(maxY,v);minY=Math.min(minY,v);}));
+  const innerW=W-PL-PR, innerH=H-PT-PB;
+  const x=i=> PL + (xs<=1?innerW/2 : (i/(xs-1))*innerW);
+  const y=v=> PT + innerH - ((v-minY)/((maxY-minY)||1))*innerH;
+  const paths = series.map((s,pi)=>{
+    if(!s.length) return "";
+    const d=s.map((v,i)=>`${i===0?"M":"L"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
+    return `<path d="${d}" fill="none" stroke="${sp.players[pi].color}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`;
+  }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">
+    <line x1="${PL}" y1="${y(0).toFixed(1)}" x2="${W-PR}" y2="${y(0).toFixed(1)}" stroke="#D2D6CC" stroke-width="1" stroke-dasharray="3 3"/>
+    ${paths}
+  </svg>`;
+}
+
+/* ---------- innstillinger ---------- */
+const sheet=document.getElementById("sheet"), sheetBg=document.getElementById("sheetBg");
+function openSheet(){
+  const sc = scoring();
+  document.getElementById("setBase").value=sc.base;
+  document.getElementById("setZero").value=sc.zero;
+  document.getElementById("setMiss").value=sc.miss;
+  document.getElementById("setSlam").value=sc.slam;
+  document.getElementById("forkastBtn").style.display = DATA.aktivtSpill ? "block":"none";
+  sheetBg.classList.add("show");sheet.classList.add("show");
+}
+function closeSheet(){sheetBg.classList.remove("show");sheet.classList.remove("show");}
+document.getElementById("brand").addEventListener("click",openSheet);
+sheetBg.addEventListener("click",closeSheet);
+document.getElementById("closeSheet").addEventListener("click",async ()=>{
+  const inn = {
+    base: parseInt(document.getElementById("setBase").value)||0,
+    zero: parseInt(document.getElementById("setZero").value)||0,
+    miss: parseInt(document.getElementById("setMiss").value)||0,
+    slam: parseInt(document.getElementById("setSlam").value)||0
+  };
+  closeSheet();
+  await send("innstillinger", {innstillinger:inn});
+  tegn();
+});
+document.getElementById("forkastBtn").addEventListener("click",async ()=>{
+  if(!confirm("Forkaste kampen som pågår? Den blir ikke lagret i historikken."))return;
+  closeSheet();
+  await send("forkast");
+  oppsett=null; skjerm="spill"; tegn();
+});
+
+/* ---------- util ---------- */
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));}
+function datoTekst(ms){
+  const d = new Date(ms);
+  const md = ["jan","feb","mar","apr","mai","jun","jul","aug","sep","okt","nov","des"];
+  return d.getDate() + ". " + md[d.getMonth()] + " " + d.getFullYear();
+}
+
+/* ---------- oppstart ---------- */
+/* Kampen som allerede var i gang (AK, Jes, LG, Jack) legges inn første gang,
+   sammen med de fire som faste spillere. Skjer bare når serveren er helt tom,
+   så den kan ikke overskrive noe senere. */
+function foersteGangsData(){
+  const navn = ["AK","Jes","LG","Jack"];
+  const spilt = [
+    {b:[3,1,4,4], t:[3,1,3,3]}, {b:[2,3,3,1], t:[2,3,3,1]},
+    {b:[2,2,3,3], t:[2,2,2,2]}, {b:[2,2,1,3], t:[2,2,1,2]},
+    {b:[1,1,2,3], t:[0,1,2,3]}, {b:[3,1,3,0], t:[2,1,2,0]},
+    {b:[1,2,2,1], t:[0,2,2,0]}, {b:[2,1,1,1], t:[1,1,1,0]},
+    {b:[0,0,1,0], t:[1,0,0,1]}, {b:[1,1,0,0], t:[1,0,0,0]}
+  ];
+  return {
+    navn,
+    spill: {
+      players: navn.map((n,i)=>({name:n, color:COLORS[i%COLORS.length], id:null})),
+      firstDealer: 0,
+      scoring: {base:10, zero:5, miss:0, slam:50},
+      rounds: SEQ.map((c,i)=> i<spilt.length
+        ? {cards:c, trump:null, confirmed:true, bids:spilt[i].b.slice(), tricks:spilt[i].t.slice()}
+        : {cards:c, trump:null, confirmed:false, bids:navn.map(()=>0), tricks:navn.map(()=>0)}),
+      created: Date.now()
+    }
+  };
+}
+
+(async function(){
+  try{
+    await hent();
+  }catch(e){
+    document.getElementById("app").innerHTML =
+      `<div class="feil">Fikk ikke kontakt med serveren. Last siden på nytt.</div>`;
+    return;
+  }
+
+  if(!DATA.deltakere.length && !DATA.historikk.length && !DATA.aktivtSpill){
+    const f = foersteGangsData();
+    for(const n of f.navn) await send("deltaker", {navn:n});
+    // knytt spillerne i kampen til de faste spillerne som nettopp ble laget
+    f.spill.players = f.spill.players.map((p,i)=>{
+      const d = DATA.deltakere.find(x=>x.navn===p.name);
+      return d ? {name:d.navn, color:d.farge, id:d.id} : p;
+    });
+    S = f.spill;
+    await send("spill", {spill:f.spill});
+  }
+
+  if(S){
+    viewRound = allDone()? S.rounds.length-1 : Math.min(firstUnconfirmed(), S.rounds.length-1);
+  }
+  tegn();
+})();
+</script>
+</body>
+</html>
