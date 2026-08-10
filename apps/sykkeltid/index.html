@@ -112,6 +112,7 @@ label.felt input, label.felt select, label.felt textarea{
   position:relative; overflow:hidden; border:2px solid var(--kant); border-radius:10px;
   background:var(--hvit); color:var(--tekst); padding:8px 3px 12px;
   line-height:1.1; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none;
+  transition:transform .09s ease, filter .09s ease;
 }
 .rute .rtall{display:block; font-size:26px; font-weight:800; font-variant-numeric:tabular-nums}
 /* Fornavnet er bekreftelsen: du leser "73 Ola" og vet at fingeren traff riktig
@@ -137,7 +138,19 @@ label.felt input, label.felt select, label.felt textarea{
    noe å stå mot. */
 .rute.forfalt{box-shadow:0 0 0 2px var(--kort), 0 0 0 4px var(--feil)}
 .rute.bekreft{box-shadow:0 0 0 4px var(--varsel) inset}
-.rute:active{filter:brightness(.88)}
+/* Hover kun der det finnes en ekte peker. På touch henger :hover igjen etter
+   et trykk, og da ville ruta blitt stående uthevet lenge etter at rytteren er
+   registrert. Vi bruker filter og ikke box-shadow, slik at ringene for forfalt
+   og bekreft får beholde sin. */
+@media (hover: hover) and (pointer: fine){
+  .rute:hover{
+    transform:scale(1.07); z-index:2;
+    filter:brightness(1.07) drop-shadow(0 3px 9px rgba(16,20,24,.32));
+  }
+  .startrad:hover{border-color:var(--aksent); background:var(--bg)}
+}
+.rute:focus-visible{outline:3px solid var(--aksent); outline-offset:2px}
+.rute:active{transform:scale(.97); filter:brightness(.88)}
 
 .banketListe{display:flex; gap:8px; overflow-x:auto; padding:4px 0}
 .banketChip{border:2px solid var(--kant); background:var(--kort); border-radius:10px; padding:8px 12px; min-width:104px; flex:0 0 auto; text-align:left}
