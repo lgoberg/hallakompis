@@ -46,7 +46,7 @@ function tomState() {
     deltakere: [],
     aktivtSpill: null,
     historikk: [],
-    innstillinger: { base: 10, zero: 5, miss: 0, slam: 50 },
+    innstillinger: { base: 10, zero: 5, miss: 0, slam: 50, kommentator: true },
     // {signatur, linjer:[{navn,linje}], laget} - signaturen er et avtrykk av
     // tallene, saa vi vet naar kommentarene er utdaterte
     karakterbok: null,
@@ -167,21 +167,73 @@ const KARAKTER_SYSTEM = [
   'Du skriver karakterboka for et kortspill en familie spiller sammen.',
   'For hver spiller skriver du én setning på norsk bokmål, med et glimt i øyet.',
   '',
+  'Du får tre slags stoff, og det beste kommer av å sy dem sammen:',
+  '1. Statistikken over alle kamper.',
+  '2. Hvordan siste kamp gikk.',
+  '3. Kveldsnotatet: hvor de var, hva de spiste, været, humøret før og etter',
+  '   målt i terningkast fra 1 til 6, og kanskje et sitat fra kvelden.',
+  'Se etter forbindelsen mellom dem. Falt humøret til den som tapte? Vant noen',
+  'rett etter en dårlig middag? Slikt er gull, bruk det.',
+  '',
   'Regler:',
   '- Den som leder skal få høre det, med en spydighet som er varm, ikke slem.',
   '- Den som sliter skal få en ekte oppmuntring. Aldri en spydighet til den som ligger sist.',
-  '- Bruk tallene du får. Ikke finn på tall som ikke står der.',
+  '- Bruk tallene og detaljene du får. Ikke finn på noe som ikke står der.',
   '- Setningen er en fortsettelse rett etter navnet. Ikke skriv navnet først.',
   '- Du kan gjerne bruke navnet inni setningen når det kler poenget.',
-  '- Maks 25 ord. Ingen emoji. Ingen tankestrek, bruk komma eller punktum.',
+  '- Maks 30 ord. Ingen emoji. Ingen tankestrek, bruk komma eller punktum.',
   '- Har spilleren null kamper, si noe lunt om at han ikke har satt seg til bordet ennå.',
-  '- Skriv ulike setninger. Ikke gjenta samme vits på flere spillere.',
+  '- Skriv ulike setninger. Ikke gjenta samme vits eller detalj på flere spillere.',
   '',
   'Eksempel på tonen, for en spiller som heter Jack og vinner alt:',
   '"er kongen, men selv konger kan falle. Klarer Jack å holde på tronen?"'
 ].join('\n');
 
-async function skrivKarakterbok(stat) {
+/* Kommentatoren foelger kampen mens den paagaar. Én kort setning om det som
+   nettopp skjedde, ikke en oppsummering av stillingen. */
+const KOMMENTATOR_SYSTEM = [
+  'Du er kommentator for et kortspill en familie spiller rundt bordet.',
+  'Du får vite hva som nettopp skjedde i runden som ble ferdig.',
+  '',
+  'Skriv ÉN setning på norsk bokmål om akkurat den runden.',
+  '',
+  'Regler:',
+  '- Kommenter det som nettopp skjedde, ikke stillingen generelt.',
+  '- Se etter det morsomme: en som meldte høyt og bommet, en som satt musestille',
+  '  på null og traff, en som tok alle stikkene, en ledelse som snudde.',
+  '- Spydig er lov, men alltid varmt. Dette er familie, ikke fiender.',
+  '- Bruk navn. Bruk tallene du får, ikke finn på nye.',
+  '- Maks 20 ord. Ingen emoji. Ingen tankestrek.',
+  '- Ikke start med "Runde X". Gå rett på det som skjedde.'
+].join('\n');
+
+async function skrivKommentar(situasjon) {
+  const klient = new AnthropicKlasse();
+  const m = await klient.messages.create({
+    model: 'claude-opus-5',
+    max_tokens: 2000,
+    system: KOMMENTATOR_SYSTEM,
+    output_config: {
+      effort: 'low',
+      format: {
+        type: 'json_schema',
+        schema: {
+          type: 'object',
+          properties: { kommentar: { type: 'string' } },
+          required: ['kommentar'],
+          additionalProperties: false
+        }
+      }
+    },
+    messages: [{ role: 'user', content: JSON.stringify(situasjon, null, 1) }]
+  });
+  if (m.stop_reason === 'refusal') throw new Error('avslått');
+  const tekst = m.content.filter(b => b.type === 'text').map(b => b.text).join('');
+  const data = JSON.parse(tekst);
+  return String(data.kommentar || '').trim().slice(0, 200);
+}
+
+async function skrivKarakterbok(stat, sisteKamp, kveldsnotat) {
   const klient = new AnthropicKlasse();
   const svarMelding = await klient.messages.create({
     model: 'claude-opus-5',
@@ -193,18 +245,21 @@ async function skrivKarakterbok(stat) {
     },
     messages: [{
       role: 'user',
-      content: 'Her er statistikken. Skriv én linje per spiller.\n\n'
-        + JSON.stringify(stat.map(s => ({
-            navn: s.navn,
-            kamper: s.kamper,
-            seire: s.seire,
-            seiersprosent: s.seiersProsent,
-            snittpoeng: s.snitt,
-            besteKamp: s.beste,
-            treffprosentPaaMelding: s.treffProsent,
-            riktigeNullmeldinger: s.nuller,
-            slam: s.slam
-          })), null, 1)
+      content: 'Skriv én linje per spiller.\n\n' + JSON.stringify({
+        statistikkOverAlleKamper: stat.map(s => ({
+          navn: s.navn,
+          kamper: s.kamper,
+          seire: s.seire,
+          seiersprosent: s.seiersProsent,
+          snittpoeng: s.snitt,
+          besteKamp: s.beste,
+          treffprosentPaaMelding: s.treffProsent,
+          riktigeNullmeldinger: s.nuller,
+          slam: s.slam
+        })),
+        sisteKamp: sisteKamp || null,
+        kveldsnotat: kveldsnotat || null
+      }, null, 1)
     }]
   });
 
@@ -292,9 +347,26 @@ const tjener = http.createServer(async (req, res) => {
       ['base', 'zero', 'miss', 'slam'].forEach(k => {
         if (i[k] !== undefined) state.innstillinger[k] = Number(i[k]) || 0;
       });
+      if (i.kommentator !== undefined) state.innstillinger.kommentator = !!i.kommentator;
       if (state.aktivtSpill) state.aktivtSpill.scoring = Object.assign({}, state.innstillinger);
       lagre();
       return svar(res, 200, state);
+    }
+
+    /* --- kommentatoren, mens kampen pågår --- */
+    if (sti === '/api/kommentator') {
+      if (!AnthropicKlasse || !process.env.ANTHROPIC_API_KEY) {
+        return svar(res, 503, { feil: 'Claude er ikke koblet til her.' });
+      }
+      if (!kropp.situasjon) return svar(res, 400, { feil: 'Ingenting å kommentere' });
+      try {
+        const kommentar = await skrivKommentar(kropp.situasjon);
+        // Kommentaren lagres på runden av klienten, ikke her: den eier spillet.
+        return svar(res, 200, { kommentar });
+      } catch (e) {
+        console.error('[10ern] kommentator feilet: ' + e.message);
+        return svar(res, 502, { feil: 'Kommentatoren tok en pause.' });
+      }
     }
 
     /* --- karakterboka, skrevet av Claude --- */
@@ -310,8 +382,11 @@ const tjener = http.createServer(async (req, res) => {
       // Klienten regner ut tallene (den eier poengreglene); serveren signerer
       // dem, slik at signaturen blir den samme for de samme tallene.
       const signatur = crypto.createHash('sha256')
-        .update(JSON.stringify(stat.map(s => [s.navn, s.kamper, s.seire, s.snitt,
-          s.treffProsent, s.beste, s.nuller, s.slam])))
+        .update(JSON.stringify([
+          stat.map(s => [s.navn, s.kamper, s.seire, s.snitt, s.treffProsent, s.beste, s.nuller, s.slam]),
+          kropp.sisteKamp || null,
+          kropp.kveldsnotat || null
+        ]))
         .digest('hex').slice(0, 16);
 
       if (!kropp.tving && state.karakterbok && state.karakterbok.signatur === signatur) {
@@ -319,7 +394,7 @@ const tjener = http.createServer(async (req, res) => {
       }
 
       try {
-        const linjer = await skrivKarakterbok(stat);
+        const linjer = await skrivKarakterbok(stat, kropp.sisteKamp, kropp.kveldsnotat);
         state.karakterbok = { signatur, linjer, laget: Date.now() };
         lagre();
         return svar(res, 200, state);

@@ -55,6 +55,14 @@
     display:flex;flex-direction:column;gap:9px;
     border-bottom:1px solid rgba(238,243,240,.16);
   }
+  .toppkant{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  /* samme form som "tilbake til hallakompis" på kortspillsida */
+  .tilbake{
+    display:inline-flex;align-items:center;gap:6px;text-decoration:none;
+    color:rgba(238,243,240,.7);font-size:13px;font-weight:600;
+    border:1px solid rgba(238,243,240,.22);border-radius:999px;padding:6px 12px;flex:none;
+  }
+  .tilbake:active{background:rgba(238,243,240,.12)}
   .brand{font-family:"Bricolage Grotesque";font-weight:800;font-size:26px;letter-spacing:-.03em;
     cursor:pointer;color:var(--paa-filt)}
   .brand .suit{color:#e8867a}
@@ -220,13 +228,52 @@
   .karakter .pdot{width:11px;height:11px;margin-top:6px;flex:none}
   .karakter p{font-size:14.5px;line-height:1.45;color:var(--ink-soft);margin:0}
   .karakter p b{color:var(--ink);font-weight:700}
+
+  /* kommentatoren mens kampen pågår */
+  .kommentator{
+    background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--gold);
+    border-radius:12px;padding:12px 14px;margin:14px 0;box-shadow:var(--shadow);
+  }
+  .kommentator .hvem{font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--gold);margin-bottom:4px}
+  .kommentator p{font-size:15px;line-height:1.45;margin:0;font-style:italic}
+  .kommentator.venter p{color:var(--ink-soft);font-style:normal}
+
+  /* kveldsnotat */
+  .notatfelt{margin:12px 0}
+  .notatfelt label{display:block;font-size:12.5px;font-weight:700;color:var(--ink-soft);margin-bottom:5px}
+  .notatfelt input{
+    width:100%;font-size:16px;font-family:Inter;color:var(--ink);background:var(--paper);
+    border:1px solid var(--line);border-radius:10px;padding:10px 12px;
+  }
+  .notatfelt input:focus{outline:2px solid var(--gold);outline-offset:1px;border-color:var(--gold)}
+  .terning{display:flex;gap:5px;flex-wrap:wrap}
+  .terning button{
+    width:38px;height:38px;border:1px solid var(--line);background:var(--paper);border-radius:9px;
+    font-weight:700;font-size:15px;color:var(--ink);cursor:pointer;font-variant-numeric:tabular-nums;
+  }
+  .terning button.sel{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+  .humorrad{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;
+    padding:10px 0;border-top:1px solid var(--line)}
+  .humorrad:first-of-type{border-top:none}
+  .humorrad .nvn{display:flex;align-items:center;gap:8px;font-weight:600;min-width:0}
+  .humorrad .nvn span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .humorpar{display:flex;gap:14px;flex-wrap:wrap}
+  .humorpar .del{display:flex;flex-direction:column;gap:4px}
+  .humorpar .del small{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft)}
+  .terning.liten button{width:30px;height:32px;font-size:13px}
+  .notatlinje{font-size:13px;color:var(--ink-soft);margin-top:8px}
+  .notatlinje b{color:var(--ink)}
   .drow .navn{flex:1;font-weight:600;font-size:16px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header class="top">
-    <div class="brand" id="brand">10<span class="suit">&#9824;</span>ern</div>
+    <div class="toppkant">
+      <div class="brand" id="brand">10<span class="suit">&#9824;</span>ern</div>
+      <a class="tilbake" id="tilbakeLenke" href="/kortspill">&larr; Kortspill</a>
+    </div>
     <div class="topknapper" id="topknapper"></div>
   </header>
   <main id="app"></main>
@@ -253,6 +300,10 @@
   <div class="srow">
     <div class="k">Slam-bonus<small>Meld og ta alle stikk på 8-, 9- og 10-kortsrunder</small></div>
     <input class="num-in" id="setSlam" type="number" inputmode="numeric">
+  </div>
+  <div class="srow">
+    <div class="k">Kommentator underveis<small>Claude sier én setning etter hver runde</small></div>
+    <button class="chip" id="setKommentator">På</button>
   </div>
   <button class="link" id="forkastBtn">Forkast kampen som pågår</button>
   <button class="btn" id="closeSheet" style="margin-top:4px">Ferdig</button>
@@ -542,7 +593,13 @@ function tegnSpill(varsel){
       <div class="pts">${total(pi)}</div>
     </div>`).join("");
 
-  app.innerHTML = varsel + `
+  const komm = sisteKommentar();
+  const kommHtml = venterPaaKommentar
+    ? `<div class="kommentator venter"><div class="hvem">Kommentatoren</div><p>tenker ...</p></div>`
+    : (komm ? `<div class="kommentator"><div class="hvem">Kommentatoren &middot; runde ${komm.runde}</div>
+        <p>${escapeHtml(komm.tekst)}</p></div>` : "");
+
+  app.innerHTML = varsel + kommHtml + `
     <div class="card" style="padding-bottom:12px">
       <div class="rhead">
         <div>
@@ -601,6 +658,8 @@ function tegnSpill(varsel){
   if(nextB&&!nextB.disabled)nextB.addEventListener("click",()=>{if(viewRound<S.rounds.length-1){viewRound++;tegn();}});
   document.getElementById("confirmR").addEventListener("click",async ()=>{
     if(!trickOk)return;
+    const varNy = !r.confirmed;
+    const runden = viewRound;
     r.confirmed=true;
     await lagreSpillNaa();
     if(!allDone()){
@@ -608,7 +667,71 @@ function tegnSpill(varsel){
       viewRound = nxt<S.rounds.length? nxt : viewRound;
     }
     window.scrollTo(0,0); tegn();
+    // etter tegningen, så runden er lagret og skjermen oppdatert først
+    if(varNy) hentKommentar(runden);
   });
+}
+
+/* ----- KOMMENTATOREN -----
+   Én setning etter hver runde, om akkurat den runden. Kallet går i bakgrunnen:
+   runden er bekreftet og lagret før vi spør, så et tregt eller dødt API kan
+   aldri holde igjen spillet. */
+let venterPaaKommentar = false;
+
+function byggSituasjon(idx){
+  const r = S.rounds[idx];
+  const foer = {}, etter = {};
+  S.players.forEach((p,pi)=>{
+    let sum = 0;
+    for(let i=0;i<idx;i++) if(S.rounds[i].confirmed) sum += roundScore(S.rounds[i], pi);
+    foer[p.name] = sum;
+    etter[p.name] = sum + roundScore(r, pi);
+  });
+  const lederFoer = Object.keys(foer).sort((a,b)=>foer[b]-foer[a])[0];
+  const lederEtter = Object.keys(etter).sort((a,b)=>etter[b]-etter[a])[0];
+  return {
+    runde: idx+1, avTotalt: S.rounds.length, antallKort: r.cards,
+    blindrunde: r.cards === 1,
+    spillere: S.players.map((p,pi)=>({
+      navn: p.name,
+      meldte: r.bids[pi],
+      fikkStikk: r.tricks[pi],
+      traffMeldingen: r.bids[pi] === r.tricks[pi],
+      poengDenneRunden: roundScore(r, pi),
+      totaltEtter: etter[p.name]
+    })),
+    lederFoerRunden: lederFoer,
+    lederEtterRunden: lederEtter,
+    ledelsenSnudde: lederFoer !== lederEtter
+  };
+}
+
+async function hentKommentar(idx){
+  if(!DATA.innstillinger || DATA.innstillinger.kommentator === false) return;
+  const kampId = S.created;
+  venterPaaKommentar = true; tegn();
+  try{
+    const r = await fetch("api/kommentator", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({situasjon: byggSituasjon(idx)})
+    });
+    const d = await r.json();
+    if(r.ok && d.kommentar && S && S.created === kampId && S.rounds[idx]){
+      S.rounds[idx].kommentar = d.kommentar;
+      lagreSpill();
+    }
+  }catch(e){ /* kommentatoren er pynt, aldri en feil som skal stoppe noe */ }
+  venterPaaKommentar = false;
+  tegn();
+}
+
+function sisteKommentar(){
+  for(let i=S.rounds.length-1;i>=0;i--){
+    if(S.rounds[i].confirmed && S.rounds[i].kommentar){
+      return {runde:i+1, tekst:S.rounds[i].kommentar};
+    }
+  }
+  return null;
 }
 
 function stepper(kind,pi,val){
@@ -617,6 +740,76 @@ function stepper(kind,pi,val){
     <span class="val">${val}</span>
     <button data-step="${kind}" data-pi="${pi}" data-dir="1">+</button>
   </div>`;
+}
+
+/* ----- KVELDSNOTAT -----
+   Konteksten rundt kampen: hvor, hva som ble spist, været, humøret. Alt er
+   frivillig, og alt havner i historikken og i grunnlaget Claude skriver ut fra.
+   En kamp er ikke bare tall, og notatet er det som gjør karakterboka morsom. */
+const NOTATFELT = [
+  {n:"sted",      l:"Hvor spilte dere?",  p:"Kjøkkenbordet hjemme"},
+  {n:"anledning", l:"Anledning",          p:"Vanlig fredagskveld"},
+  {n:"middag",    l:"Hva spiste dere?",   p:"Taco, som alltid"},
+  {n:"vaer",      l:"Været ute",          p:"Regn og mørkt"},
+  {n:"drikke",    l:"Hva drakk dere?",    p:"Kaffe og saft"},
+  {n:"sitat",     l:"Kveldens sitat",     p:"«Jeg melder null, jeg lover»"}
+];
+
+function sikreNotat(){
+  if(!S.kveldsnotat) S.kveldsnotat = {humor:{}, stemning:null};
+  if(!S.kveldsnotat.humor) S.kveldsnotat.humor = {};
+  return S.kveldsnotat;
+}
+
+function terningHtml(felt, verdi, ekstra){
+  return `<div class="terning ${ekstra||""}">` + [1,2,3,4,5,6].map(t=>
+    `<button data-terning="${felt}" data-verdi="${t}" class="${verdi===t?"sel":""}">${t}</button>`
+  ).join("") + `</div>`;
+}
+
+function htmlKveldsnotat(){
+  const k = sikreNotat();
+  const felt = NOTATFELT.map(f=>`
+    <div class="notatfelt">
+      <label>${f.l}</label>
+      <input data-notat="${f.n}" placeholder="${escapeHtml(f.p)}" maxlength="120"
+             value="${escapeHtml(k[f.n]||"")}" autocomplete="off">
+    </div>`).join("");
+
+  const humor = S.players.map(p=>{
+    const h = k.humor[p.name] || {};
+    return `<div class="humorrad">
+      <div class="nvn"><span class="pdot" style="background:${p.color}"></span><span>${escapeHtml(p.name)}</span></div>
+      <div class="humorpar">
+        <div class="del"><small>Før</small>${terningHtml("humor:"+p.name+":foer", h.foer, "liten")}</div>
+        <div class="del"><small>Etter</small>${terningHtml("humor:"+p.name+":etter", h.etter, "liten")}</div>
+      </div>
+    </div>`;
+  }).join("");
+
+  return `<div class="card">
+    <div class="eyebrow">Kveldsnotat</div>
+    <p class="muted" style="margin:0 0 6px">Alt er frivillig. Det du skriver her havner i historikken, og Claude bruker det når karakterboka skrives.</p>
+    ${felt}
+    <div class="notatfelt">
+      <label>Stemningen ved bordet (terningkast)</label>
+      ${terningHtml("stemning", k.stemning)}
+    </div>
+    <div class="notatfelt">
+      <label>Humør per spiller, før og etter</label>
+      ${humor}
+    </div>
+  </div>`;
+}
+
+function notatSammendrag(sp){
+  const k = sp.kveldsnotat;
+  if(!k) return "";
+  const biter = [];
+  NOTATFELT.forEach(f=>{ if(k[f.n]) biter.push(escapeHtml(k[f.n])); });
+  if(k.stemning) biter.push("stemning " + k.stemning + " av 6");
+  if(!biter.length) return "";
+  return `<div class="notatlinje">${biter.join(" &middot; ")}</div>`;
 }
 
 /* ----- SAMMENDRAG ----- */
@@ -650,12 +843,31 @@ function tegnSammendrag(varsel){
       <div class="eyebrow">Sluttstatistikk</div>
       ${statRows}
     </div>
+    ${htmlKveldsnotat()}
     <p class="center paafilt" style="margin:12px 4px">Lagrer du kampen, havner den i historikken og teller med i statistikken.</p>
   `;
   footer.innerHTML = `<div class="inner" style="display:flex;gap:10px">
     <button class="btn lys" id="backPlay">Rediger runder</button>
     <button class="btn" id="lagreKamp">Lagre kampen</button>
   </div>`;
+  // Tekstfeltene lagres uten å tegne på nytt, ellers mister du markøren midt i
+  // et ord. Terningene tegner på nytt, for de må vise valget.
+  app.querySelectorAll("[data-notat]").forEach(inp=>inp.addEventListener("input",e=>{
+    sikreNotat()[e.target.dataset.notat] = e.target.value;
+    lagreSpill();
+  }));
+  app.querySelectorAll("[data-terning]").forEach(b=>b.addEventListener("click",()=>{
+    const k = sikreNotat();
+    const felt = b.dataset.terning, verdi = Number(b.dataset.verdi);
+    if(felt === "stemning"){
+      k.stemning = (k.stemning === verdi) ? null : verdi;
+    }else{
+      const [, navn, naar] = felt.split(":");
+      if(!k.humor[navn]) k.humor[navn] = {};
+      k.humor[navn][naar] = (k.humor[navn][naar] === verdi) ? null : verdi;
+    }
+    lagreSpill(); tegn();
+  }));
   document.getElementById("backPlay").addEventListener("click",()=>{viewRound=S.rounds.length-1;tegn();});
   document.getElementById("lagreKamp").addEventListener("click",async ()=>{
     const ok = await send("avslutt");
@@ -854,10 +1066,35 @@ function claudeLinjer(){
   return kart;
 }
 
+/* Claude får ikke bare tallene, men også hvordan siste kamp gikk, hva
+   kommentatoren sa underveis, og kveldsnotatet. Det er sammenhengen mellom dem
+   som gjør linjene morsomme. */
+function sisteKampSammendrag(){
+  if(!DATA.historikk.length) return null;
+  const sp = DATA.historikk[0];
+  const vinnere = vinnereAv(sp);
+  const rekke = [...sp.players.keys()].sort((a,b)=>totalFor(sp,b)-totalFor(sp,a));
+  return {
+    spiltDato: datoTekst(sp.avsluttet || sp.created),
+    vinner: vinnere.map(w=>sp.players[w].name),
+    sluttstilling: rekke.map(pi=>{
+      const st = spillerStatIKamp(sp, pi);
+      return {navn: sp.players[pi].name, poeng: totalFor(sp,pi),
+              treffprosent: st.treffProsent, riktigeNuller: st.nuller, slam: st.slam};
+    }),
+    kommentarerUnderveis: sp.rounds.filter(r=>r.kommentar).map(r=>r.kommentar).slice(-5)
+  };
+}
+
 async function hentKarakterbok(){
   if(skriverKarakterbok) return;
   skriverKarakterbok = true; feilmelding = ""; tegn();
-  await send("karakterbok", {statistikk: samletStatistikk(), tving: true});
+  await send("karakterbok", {
+    statistikk: samletStatistikk(),
+    sisteKamp: sisteKampSammendrag(),
+    kveldsnotat: DATA.historikk.length ? (DATA.historikk[0].kveldsnotat || null) : null,
+    tving: true
+  });
   skriverKarakterbok = false;
   tegn();
 }
@@ -1020,15 +1257,26 @@ function chartSvg(sp){
 
 /* ---------- innstillinger ---------- */
 const sheet=document.getElementById("sheet"), sheetBg=document.getElementById("sheetBg");
+let kommentatorPaa = true;
 function openSheet(){
   const sc = scoring();
   document.getElementById("setBase").value=sc.base;
   document.getElementById("setZero").value=sc.zero;
   document.getElementById("setMiss").value=sc.miss;
   document.getElementById("setSlam").value=sc.slam;
+  kommentatorPaa = DATA.innstillinger.kommentator !== false;
+  tegnKommentatorknapp();
   document.getElementById("forkastBtn").style.display = DATA.aktivtSpill ? "block":"none";
   sheetBg.classList.add("show");sheet.classList.add("show");
 }
+function tegnKommentatorknapp(){
+  const b = document.getElementById("setKommentator");
+  b.textContent = kommentatorPaa ? "På" : "Av";
+  b.classList.toggle("sel", kommentatorPaa);
+}
+document.getElementById("setKommentator").addEventListener("click",()=>{
+  kommentatorPaa = !kommentatorPaa; tegnKommentatorknapp();
+});
 function closeSheet(){sheetBg.classList.remove("show");sheet.classList.remove("show");}
 document.getElementById("brand").addEventListener("click",openSheet);
 sheetBg.addEventListener("click",closeSheet);
@@ -1037,7 +1285,8 @@ document.getElementById("closeSheet").addEventListener("click",async ()=>{
     base: parseInt(document.getElementById("setBase").value)||0,
     zero: parseInt(document.getElementById("setZero").value)||0,
     miss: parseInt(document.getElementById("setMiss").value)||0,
-    slam: parseInt(document.getElementById("setSlam").value)||0
+    slam: parseInt(document.getElementById("setSlam").value)||0,
+    kommentator: kommentatorPaa
   };
   closeSheet();
   await send("innstillinger", {innstillinger:inn});
@@ -1084,6 +1333,15 @@ function foersteGangsData(){
     }
   };
 }
+
+/* Tilbake-lenka peker dit kortspillsida faktisk ligger, både før og etter at
+   hallakompis.no er satt opp. Samme regel som portalen bruker. */
+(function(){
+  const m = location.hostname.match(/^p\d+--[\w-]+--([\w]+)\.code\.run$/);
+  document.getElementById("tilbakeLenke").href = m
+    ? "https://p01--portal--" + m[1] + ".code.run/kortspill"
+    : "https://hallakompis.no/kortspill";
+})();
 
 (async function(){
   try{
