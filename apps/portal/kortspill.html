@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1d4b3e">
+<title>Kortspill · hallakompis</title>
+<meta name="description" content="Kortspillene på hallakompis. 10'ern er først ute, flere kommer.">
+<link rel="icon" href="ikon.svg">
+<link rel="apple-touch-icon" href="ikon.svg">
+<style>
+:root{
+  --filt:#1d4b3e;          /* bordfilten */
+  --filt-mork:#163a30;
+  --kort:#FBFBF8;
+  --kort-kant:#e2e0d6;
+  --tekst:#16211f;
+  --svak:#5f6f6b;
+  --rod:#B23A2E;
+  --gull:#C0883A;
+  --lys:#eef3f0;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  /* filten: en dus duk med litt dybde i hjørnene */
+  background:
+    radial-gradient(120% 90% at 50% 0%, #2a6353 0%, var(--filt) 45%, var(--filt-mork) 100%);
+  background-attachment:fixed;
+  color:var(--lys);
+  font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  -webkit-text-size-adjust:100%;
+  min-height:100vh;
+  padding:0 20px calc(56px + env(safe-area-inset-bottom));
+}
+.ramme{max-width:900px;margin:0 auto}
+
+/* ---------- topp ---------- */
+.tilbake{
+  display:inline-flex;align-items:center;gap:7px;margin-top:calc(20px + env(safe-area-inset-top));
+  color:rgba(238,243,240,.7);text-decoration:none;font-size:14px;font-weight:600;
+  border:1px solid rgba(238,243,240,.22);border-radius:999px;padding:7px 14px;
+}
+.tilbake:hover{color:var(--lys);border-color:rgba(238,243,240,.5)}
+
+header{text-align:center;padding:26px 0 34px}
+
+/* en liten hånd med kort, viftet ut */
+.vifte{height:96px;position:relative;margin:0 auto 18px;width:190px}
+.vifte i{
+  position:absolute;left:50%;bottom:0;width:52px;height:74px;margin-left:-26px;
+  background:var(--kort);border:1px solid var(--kort-kant);border-radius:7px;
+  box-shadow:0 6px 18px -8px rgba(0,0,0,.55);
+  /* symbolet ligger øverst på kortet, ellers blir det dekket av nabokortet
+     når vifta overlapper */
+  display:grid;place-items:start center;padding-top:9px;font-size:18px;color:var(--tekst);
+  transform-origin:50% 118%;
+}
+/* vifta må være åpen nok til at alle fire fargene vises */
+.vifte i:nth-child(1){transform:rotate(-34deg)}
+.vifte i:nth-child(2){transform:rotate(-11.5deg)}
+.vifte i:nth-child(3){transform:rotate(11.5deg)}
+.vifte i:nth-child(4){transform:rotate(34deg)}
+.vifte i.r{color:var(--rod)}
+
+h1{font-size:42px;font-weight:800;letter-spacing:-.03em;line-height:1.05}
+header p{color:rgba(238,243,240,.72);margin-top:10px;font-size:17px}
+
+h2{
+  font-size:12px;text-transform:uppercase;letter-spacing:.14em;font-weight:700;
+  color:rgba(238,243,240,.55);margin:34px 0 16px;text-align:center;
+}
+
+/* ---------- kortene ---------- */
+/* Flex, ikke grid: ett enkelt kort skal legge seg midt på bordet. Med
+   grid auto-fit kollapset ikke den tomme kolonnen på smal skjerm, og kortet
+   ble stående til venstre for midten. */
+.bord{display:flex;flex-wrap:wrap;gap:18px;justify-content:center;align-items:flex-start}
+.spillkort{
+  flex:1 1 140px;max-width:190px;aspect-ratio:5/7;position:relative;display:block;
+  text-decoration:none;border-radius:12px;
+  transition:transform .18s cubic-bezier(.2,.7,.3,1), box-shadow .18s ease;
+  box-shadow:0 10px 26px -14px rgba(0,0,0,.75);
+}
+/* småskeivt, som kort lagt ned for hånd */
+.spillkort:nth-child(3n+1){transform:rotate(-1.8deg)}
+.spillkort:nth-child(3n+2){transform:rotate(1.2deg)}
+.spillkort:nth-child(3n+3){transform:rotate(-.6deg)}
+@media (hover:hover) and (pointer:fine){
+  a.spillkort:hover{transform:rotate(0deg) translateY(-10px);box-shadow:0 22px 40px -18px rgba(0,0,0,.8)}
+}
+a.spillkort:active{transform:rotate(0deg) translateY(-3px)}
+
+.forside{
+  position:absolute;inset:0;background:var(--kort);border:1px solid var(--kort-kant);
+  border-radius:12px;padding:11px;display:flex;flex-direction:column;color:var(--tekst);
+}
+.hjorne{position:absolute;font-weight:800;line-height:.95;font-size:15px;letter-spacing:-.02em}
+.hjorne small{display:block;font-size:15px;font-weight:700}
+.hjorne.tv{top:9px;left:10px}
+.hjorne.hb{bottom:9px;right:10px;transform:rotate(180deg)}
+.rod{color:var(--rod)} .sort{color:var(--tekst)}
+
+.midt{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;padding:14px 4px 8px}
+.pip{font-size:34px;line-height:1;margin-bottom:8px}
+.navn{font-size:19px;font-weight:800;letter-spacing:-.02em}
+.undertekst{font-size:11.5px;color:var(--svak);margin-top:5px;line-height:1.35}
+.spillmerke{
+  margin-top:9px;font-size:10.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--gull);border:1px solid var(--gull);border-radius:999px;padding:3px 9px;
+}
+
+/* baksiden: for spill som ikke er klare */
+.bakside{
+  position:absolute;inset:0;border-radius:12px;border:1px solid rgba(238,243,240,.16);
+  background:
+    repeating-linear-gradient(45deg, rgba(238,243,240,.10) 0 5px, transparent 5px 10px),
+    repeating-linear-gradient(-45deg, rgba(238,243,240,.10) 0 5px, transparent 5px 10px),
+    linear-gradient(160deg,#2b6a58,#1a4438);
+  display:grid;place-items:center;
+}
+.bakside .lapp{
+  background:rgba(22,33,31,.45);border:1px solid rgba(238,243,240,.2);border-radius:999px;
+  padding:6px 13px;font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+  color:rgba(238,243,240,.85);
+}
+.spillkort.ukjent{opacity:.9}
+
+footer{
+  margin-top:52px;padding-top:22px;border-top:1px solid rgba(238,243,240,.14);
+  color:rgba(238,243,240,.55);font-size:13px;text-align:center;
+}
+footer a{color:rgba(238,243,240,.8)}
+@media (max-width:520px){
+  h1{font-size:34px}
+  header p{font-size:15.5px}
+  .bord{gap:14px;grid-template-columns:repeat(auto-fill,minmax(132px,1fr))}
+}
+</style>
+</head>
+<body>
+<div class="ramme">
+
+  <a class="tilbake" href="/">&larr; hallakompis</a>
+
+  <header>
+    <div class="vifte">
+      <i class="r">&hearts;</i><i>&spades;</i><i class="r">&diams;</i><i>&clubs;</i>
+    </div>
+    <h1>Kortspill</h1>
+    <p>Poengregning for spillene vi faktisk spiller. Appen teller, du kan konsentrere deg om kortene.</p>
+  </header>
+
+  <h2 id="overskriftKlare" hidden>På bordet</h2>
+  <div class="bord" id="bordKlare"></div>
+
+  <h2 id="overskriftKommer" hidden>I kortstokken</h2>
+  <div class="bord" id="bordKommer"></div>
+
+  <footer>Flere spill kommer. <a href="/">Tilbake til hallakompis</a></footer>
+
+</div>
+
+<script>
+/* Nytt kortspill? Legg til én linje her.
+   valor + sort tegner kortet, så velg noe som passer spillet.
+   status: 'klar' gir et kort med forsida opp og lenke, alt annet legges
+   med baksiden opp i kortstokken nedenfor. */
+var SPILL = [
+  {
+    navn: "10'ern",
+    undertekst: 'Meld stikk, treff nøyaktig. 20 runder fra ti kort ned til blindt og opp igjen.',
+    valor: '10', sort: '♠',
+    subdomene: 'tiern', tjeneste: 'tiern',
+    status: 'klar'
+  },
+  { navn: '', status: 'kommer' },
+  { navn: '', status: 'kommer' }
+];
+
+(function(){
+  function esc(s){
+    return String(s == null ? '' : s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  /* Adressa avledes av hvor sida selv kjører, slik at lenkene virker både før
+     og etter at hallakompis.no er satt opp. */
+  function adresse(s){
+    if(s.adresse) return s.adresse;
+    var m = location.hostname.match(/^p\d+--[\w-]+--([\w]+)\.code\.run$/);
+    if(m && s.tjeneste) return 'https://p01--' + s.tjeneste + '--' + m[1] + '.code.run';
+    if(s.subdomene) return 'https://' + s.subdomene + '.hallakompis.no';
+    return '';
+  }
+
+  function erRod(sort){ return sort === '♥' || sort === '♦'; }
+
+  function forside(s){
+    var url = adresse(s);
+    var f = erRod(s.sort) ? 'rod' : 'sort';
+    var hjorne = '<span class="hjorne ' + f + ' {POS}">' + esc(s.valor) + '<small>' + esc(s.sort) + '</small></span>';
+    return '<a class="spillkort" href="' + esc(url) + '">'
+      + '<span class="forside">'
+        + hjorne.replace('{POS}','tv')
+        + hjorne.replace('{POS}','hb')
+        + '<span class="midt">'
+          + '<span class="pip ' + f + '">' + esc(s.sort) + '</span>'
+          + '<span class="navn">' + esc(s.navn) + '</span>'
+          + '<span class="undertekst">' + esc(s.undertekst || '') + '</span>'
+          + '<span class="spillmerke">Spill</span>'
+        + '</span>'
+      + '</span></a>';
+  }
+
+  function bakside(s){
+    return '<div class="spillkort ukjent">'
+      + '<span class="bakside"><span class="lapp">' + esc(s.navn || 'kommer') + '</span></span>'
+      + '</div>';
+  }
+
+  function fyll(overskriftId, bordId, poster, tegner){
+    document.getElementById(overskriftId).hidden = !poster.length;
+    document.getElementById(bordId).innerHTML = poster.map(tegner).join('');
+  }
+
+  fyll('overskriftKlare', 'bordKlare', SPILL.filter(function(s){ return s.status === 'klar'; }), forside);
+  fyll('overskriftKommer', 'bordKommer', SPILL.filter(function(s){ return s.status !== 'klar'; }), bakside);
+})();
+</script>
+</body>
+</html>

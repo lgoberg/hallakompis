@@ -37,8 +37,9 @@ function serverFil(res, filnavn) {
     return res.end('Fant ikke siden');
   }
   const type = MIME[path.extname(full).toLowerCase()] || 'application/octet-stream';
-  // Sida endrer seg sjelden, men skal ikke ligge fast naar den foerst endres.
-  const cache = filnavn === 'index.html' ? 'no-cache' : 'public, max-age=3600';
+  // Alle sider skal hentes friskt. Ble de cachet, ville en endring ikke vises
+  // foer cachen gikk ut, og det gjelder hver side, ikke bare forsida.
+  const cache = /\.html$/.test(filnavn) ? 'no-cache' : 'public, max-age=3600';
   const kropp = fs.readFileSync(full);
   res.writeHead(200, {
     'Content-Type': type,
@@ -60,6 +61,8 @@ const tjener = http.createServer((req, res) => {
   }
 
   if (sti === '/' || sti === '/index.html') return serverFil(res, 'index.html');
+  // /kortspill og /kortspill/ er samme side: folk skriver begge deler
+  if (sti === '/kortspill' || sti === '/kortspill/') return serverFil(res, 'kortspill.html');
   if (/^\/[\w.-]+$/.test(sti)) return serverFil(res, sti.slice(1));
 
   // alt annet faller tilbake til forsida, saa en feilskrevet adresse
