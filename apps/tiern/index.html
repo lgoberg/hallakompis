@@ -525,7 +525,26 @@ function tegnOppsett(varsel){
       <button class="btn lys" id="angreForkast">Hent kampen tilbake</button>
     </div>` : "";
 
-  app.innerHTML = varsel + angreKort + `
+  // Halvspilte kamper som venter på at den samme gjengen sitter samlet igjen.
+  const parkerte = DATA.parkerte || [];
+  const parkertKort = parkerte.length ? `<div class="card">
+      <div class="eyebrow">Uferdige kamper</div>
+      <p class="muted" style="margin:0 0 4px">Lagt til side, klare til å fortsette der de slapp.</p>
+      ${parkerte.map(sp=>`
+        <div class="drow" style="align-items:flex-start">
+          <div class="navn" style="white-space:normal">
+            ${escapeHtml(sp.players.map(p=>p.name).join(", "))}
+            <div class="muted" style="font-size:13px;font-weight:400">
+              ${sp.rounds.filter(r=>r.confirmed).length} av 20 runder &middot;
+              ${escapeHtml(datoTekst(sp.parkert || sp.created))}
+            </div>
+          </div>
+          <button class="ghost-btn" style="width:auto;margin:0;padding:8px 14px" data-hent="${sp.created}">Fortsett</button>
+          <button class="rm" data-slettparkert="${sp.created}">&times;</button>
+        </div>`).join("")}
+    </div>` : "";
+
+  app.innerHTML = varsel + angreKort + parkertKort + `
     <div class="card">
       <div class="eyebrow">Hvem spiller?</div>
       ${DATA.deltakere.length
@@ -582,6 +601,20 @@ function tegnOppsett(varsel){
     window.scrollTo(0,0); tegn();
     varsle("Kampen er tilbake.");
   });
+  app.querySelectorAll("[data-hent]").forEach(b=>b.addEventListener("click",async ()=>{
+    const ok = await send("hent-fram", {created: Number(b.dataset.hent)});
+    if(!ok) return;
+    oppsett = null; skjerm = "spill";
+    viewRound = Math.min(firstUnconfirmed(), S.rounds.length-1);
+    window.scrollTo(0,0); tegn();
+    varsle("Kampen er hentet fram igjen.");
+  }));
+  app.querySelectorAll("[data-slettparkert]").forEach(b=>b.addEventListener("click",async ()=>{
+    const sp = parkerte.find(x=>String(x.created)===b.dataset.slettparkert);
+    if(!confirm("Slette den uferdige kampen med " + (sp?sp.players.map(p=>p.name).join(", "):"disse") + "?")) return;
+    await send("parkert/slett", {created: Number(b.dataset.slettparkert)});
+    tegn();
+  }));
   document.getElementById("addGjest").addEventListener("click",()=>{ o.ekstra.push(""); tegn(); });
   const dagen = document.getElementById("dagenKort");
   if(dagen){
@@ -780,10 +813,15 @@ function tegnSpill(varsel){
   if(meldKn) meldKn.addEventListener("click",()=>hentKommentar(viewRound, "melding"));
   const meldNy = document.getElementById("meldPaaNytt");
   if(meldNy) meldNy.addEventListener("click",()=>hentKommentar(viewRound, "melding"));
+  // «Fortsett senere» legger kampen til side i stedet for å la den stå som den
+  // aktive. Da kan dere starte en ny kamp med en annen gjeng uten å miste
+  // denne, og hente den fram igjen når de samme sitter rundt bordet.
   document.getElementById("senere").addEventListener("click",async ()=>{
     await lagreSpillNaa();
-    skjerm="historikk"; window.scrollTo(0,0); tegn();
-    varsle("Kampen ligger lagret. Den står der til dere fortsetter.");
+    const ok = await send("parker");
+    if(!ok) return;
+    oppsett = null; skjerm="spill"; window.scrollTo(0,0); tegn();
+    varsle("Kampen er lagt til side. Du finner den igjen under «Uferdige kamper».");
   });
   document.getElementById("prevR").addEventListener("click",()=>{if(viewRound>0){viewRound--;tegn();}});
   const nextB=document.getElementById("nextR");

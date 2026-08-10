@@ -52,6 +52,9 @@ function tomState() {
     karakterbok: null,
     // siste forkastede kamp, slik at et feiltrykk kan angres
     forkastet: null,
+    // kamper som er lagt til side halvspilt. Treffer dere samme gjeng igjen,
+    // hentes kampen fram og fortsetter der den slapp.
+    parkerte: [],
     versjon: 0
   };
 }
@@ -553,6 +556,42 @@ const tjener = http.createServer(async (req, res) => {
       }
       state.aktivtSpill = state.forkastet.spill;
       state.forkastet = null;
+      lagre();
+      return svar(res, 200, state);
+    }
+
+    /* --- parkerte kamper ---
+       Én kamp kan være aktiv om gangen, men flere kan ligge halvspilte. Derfor
+       parkeres den som står i veien automatisk naar en annen hentes fram: da
+       kan man aldri miste en kamp ved aa aapne en annen. */
+    if (sti === '/api/parker') {
+      if (!state.aktivtSpill) return svar(res, 400, { feil: 'Ingen kamp å legge til side' });
+      state.aktivtSpill.parkert = Date.now();
+      state.parkerte.unshift(state.aktivtSpill);
+      if (state.parkerte.length > 30) state.parkerte.length = 30;
+      state.aktivtSpill = null;
+      lagre();
+      return svar(res, 200, state);
+    }
+
+    if (sti === '/api/hent-fram') {
+      const i = state.parkerte.findIndex(s => String(s.created) === String(kropp.created));
+      if (i < 0) return svar(res, 404, { feil: 'Fant ikke den parkerte kampen' });
+      if (state.aktivtSpill) {
+        state.aktivtSpill.parkert = Date.now();
+        state.parkerte.push(state.aktivtSpill);
+      }
+      const spill = state.parkerte.splice(i, 1)[0];
+      delete spill.parkert;
+      state.aktivtSpill = spill;
+      lagre();
+      return svar(res, 200, state);
+    }
+
+    if (sti === '/api/parkert/slett') {
+      const foer = state.parkerte.length;
+      state.parkerte = state.parkerte.filter(s => String(s.created) !== String(kropp.created));
+      if (state.parkerte.length === foer) return svar(res, 404, { feil: 'Fant ikke kampen' });
       lagre();
       return svar(res, 200, state);
     }
