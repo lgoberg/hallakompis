@@ -17,8 +17,10 @@ body{
   display:flex; flex-direction:column;
 }
 header{
-  display:flex; align-items:center; padding:1.6vh 2vw; border-bottom:1px solid #232b36; flex:0 0 auto;
+  display:flex; align-items:center; gap:1.4vw; padding:1.2vh 2vw; border-bottom:1px solid #232b36; flex:0 0 auto;
 }
+/* logoen har hvit bakgrunn, så den får en lys plate å stå på i mørk visning */
+header .logo{height:6vh; width:auto; background:#fff; border-radius:.8vh; padding:.4vh .6vh}
 header .tittel{font-size:3.2vh; font-weight:800; letter-spacing:.01em}
 header .tellere{margin-left:auto; display:flex; gap:2.4vw; font-size:2vh; color:#93a1b2}
 header .tellere b{color:#eef2f7; font-size:2.8vh; font-weight:800}
@@ -64,6 +66,7 @@ tr.gull td{background:#123724}
 <body>
 
 <header>
+  <img class="logo" src="logo.png" alt="Golia Vel">
   <span class="tittel" id="tittel">Godlia Rundt</span>
   <span class="tellere">
     <span>Ute <b id="tUte">0</b></span>

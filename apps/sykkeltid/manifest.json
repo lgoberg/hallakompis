@@ -1,7 +1,7 @@
 {
-  "name": "Idealtid - tidtaking",
-  "short_name": "Idealtid",
-  "description": "Tidtaking for sykkelløp på idealtid",
+  "name": "Godlia Rundt - tidtaking",
+  "short_name": "Godlia Rundt",
+  "description": "Tidtaking på idealtid for Golia Vel",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
@@ -9,6 +9,7 @@
   "background_color": "#eef1f5",
   "theme_color": "#0b6bcb",
   "icons": [
+    { "src": "ikon.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "ikon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
   ]
 }

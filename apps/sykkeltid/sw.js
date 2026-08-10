@@ -3,8 +3,9 @@
    paa nytt (for eksempel etter at telefonen har startet om midt i loepet).
    API-kall gaar aldri gjennom cachen - de skal feile aapent, slik at klienten
    legger hendelsene i ko i stedet for aa faa servert gammelt svar. */
-var CACHE = 'sykkeltid-v2';
-var SKALL = ['./', './index.html', './tv.html', './felles.js', './manifest.json', './ikon.svg'];
+var CACHE = 'sykkeltid-v3';
+var SKALL = ['./', './index.html', './tv.html', './felles.js', './manifest.json',
+             './ikon.svg', './ikon.png', './logo.png'];
 
 self.addEventListener('install', function (ev) {
   ev.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(SKALL); }).then(function () {

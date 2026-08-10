@@ -173,11 +173,24 @@ function lesKropp(req) {
   });
 }
 
+/* Oekter bindes til koden de ble opprettet med. Da blir "bytt kode" samtidig en
+   utloggingsknapp for alle enheter, som er det du trenger hvis en telefon blir
+   borte paa loepsdagen. Uten dette ville et gammelt token levd videre for
+   alltid, siden det valideres uavhengig av koden. */
+function kodeSignatur() {
+  return crypto.createHash('sha256').update(String(KODE)).digest('hex').slice(0, 16);
+}
+
 function okt(req) {
   const token = req.headers['x-okt'];
   if (!token) return null;
   const o = okter[token];
   if (!o) return null;
+  if (o.kode !== kodeSignatur()) {
+    delete okter[token];
+    lagreOkter();
+    return null;
+  }
   o.sist = Date.now();
   return o;
 }
@@ -241,6 +254,7 @@ const tjener = http.createServer(async (req, res) => {
     okter[token] = {
       navn: String(kropp.navn || 'Post').slice(0, 40),
       rolle: ['start', 'mal', 'arrangor'].includes(kropp.rolle) ? kropp.rolle : 'arrangor',
+      kode: kodeSignatur(),
       sist: Date.now()
     };
     lagreOkter();

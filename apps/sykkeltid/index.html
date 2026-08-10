@@ -9,7 +9,7 @@
 <title>Godlia Rundt - tidtaking</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="ikon.svg">
-<link rel="apple-touch-icon" href="ikon.svg">
+<link rel="apple-touch-icon" href="ikon.png">
 <style>
 :root{
   --bg:#eef1f5; --kort:#ffffff; --tekst:#101418; --svak:#5b6472; --kant:#d6dce4;
@@ -34,13 +34,20 @@ body{
 button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 
-header{
+/* Header og faneraden ligger i ETT sticky-lag. Var de to sticky-elementer med
+   top:0 hver for seg, la faneraden seg under headeren ved scroll, og trykkene
+   traff headeren i stedet for fanen. */
+.topplinje{
   position:sticky; top:0; z-index:20; background:var(--kort);
   border-bottom:1px solid var(--kant);
-  padding:calc(6px + env(safe-area-inset-top)) 12px 6px;
-  display:flex; align-items:center; gap:8px; flex-wrap:wrap;
 }
-header .navn{font-weight:700; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:40vw}
+header{
+  padding:calc(6px + env(safe-area-inset-top)) 12px 6px;
+  display:flex; align-items:center; gap:8px;
+}
+header .merke{display:flex; align-items:center; gap:8px; min-width:0}
+header .logo{height:26px; width:auto; display:block; flex:0 0 auto}
+header .navn{font-weight:700; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:34vw}
 header .klokke{font-variant-numeric:tabular-nums; font-weight:700; font-size:19px; margin-left:auto}
 .status{font-size:12px; font-weight:700; padding:3px 9px; border-radius:999px; border:1px solid var(--kant); white-space:nowrap}
 .status.pa{color:var(--ok); border-color:var(--ok)}
@@ -48,11 +55,16 @@ header .klokke{font-variant-numeric:tabular-nums; font-weight:700; font-size:19p
 .status.av{color:#fff; background:var(--feil); border-color:var(--feil)}
 
 nav{
-  position:sticky; top:0; z-index:19; display:flex; gap:4px; overflow-x:auto;
-  background:var(--kort); border-bottom:1px solid var(--kant); padding:6px 8px; scrollbar-width:none;
+  display:flex; gap:4px; overflow-x:auto; padding:4px 8px 6px; scrollbar-width:none;
+  -webkit-overflow-scrolling:touch;
 }
 nav::-webkit-scrollbar{display:none}
-nav button{border:1px solid transparent; background:transparent; color:var(--svak); padding:8px 12px; border-radius:999px; font-weight:600; font-size:14px; white-space:nowrap}
+/* 44 px er minste treffsikre knapp med hansker på. */
+nav button{
+  border:1px solid transparent; background:transparent; color:var(--svak);
+  padding:0 14px; min-height:44px; border-radius:999px; font-weight:600; font-size:15px;
+  white-space:nowrap; flex:0 0 auto;
+}
 nav button.aktiv{background:var(--aksent); color:var(--aksentTekst)}
 main{padding:12px; max-width:1100px; margin:0 auto}
 
@@ -84,9 +96,15 @@ label.felt input, label.felt select, label.felt textarea{
 @media (max-width:760px){ .rutenett{grid-template-columns:repeat(5,1fr)} }
 .rute{
   position:relative; overflow:hidden; border:2px solid var(--kant); border-radius:10px;
-  background:var(--hvit); color:var(--tekst); padding:10px 4px 12px;
-  font-size:26px; font-weight:800; font-variant-numeric:tabular-nums; line-height:1.1;
-  user-select:none; -webkit-user-select:none; -webkit-touch-callout:none;
+  background:var(--hvit); color:var(--tekst); padding:8px 3px 12px;
+  line-height:1.1; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none;
+}
+.rute .rtall{display:block; font-size:26px; font-weight:800; font-variant-numeric:tabular-nums}
+/* Fornavnet er bekreftelsen: du leser "73 Ola" og vet at fingeren traff riktig
+   rute, uten å måtte vente på kvitteringen nederst. */
+.rute .rnavn{
+  display:block; font-size:11px; font-weight:600; opacity:.8; margin-top:2px;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
 .rute .rmerke{
   position:absolute; top:3px; right:5px; font-size:10px; font-weight:800;
@@ -176,14 +194,18 @@ td input.alder{width:56px; text-align:center}
 </head>
 <body>
 
-<header>
-  <span class="navn" id="toppNavn">Godlia Rundt</span>
-  <span class="status" id="toppStatus">kobler til</span>
-  <span class="klokke tall" id="toppKlokke">--:--:--</span>
-  <button class="knapp mini" data-handling="angre" id="angreKnapp">Angre</button>
-</header>
-
-<nav id="faner"></nav>
+<div class="topplinje">
+  <header>
+    <span class="merke">
+      <img class="logo" src="logo.png" alt="Golia Vel">
+      <span class="navn" id="toppNavn">Godlia Rundt</span>
+    </span>
+    <span class="status" id="toppStatus">kobler til</span>
+    <span class="klokke tall" id="toppKlokke">--:--:--</span>
+    <button class="knapp mini" data-handling="angre" id="angreKnapp">Angre</button>
+  </header>
+  <nav id="faner"></nav>
+</div>
 <main id="innhold"></main>
 
 <div id="kvittering" class="skjult">
@@ -390,6 +412,7 @@ var ALLE_FANER = {
    rutenettet liggende, og maalposten skal ikke kunne sende ryttere ut. */
 function mineFaner(){
   var r = minOkt && minOkt.rolle;
+  if (offentligModus) return ['resultat'];
   if (!token) return ['resultat','logginn'];
   if (r === 'start') return ['start','resultat','deltakere','oppsett','data'];
   if (r === 'mal') return ['rutenett','resultat','deltakere','oppsett','data'];
@@ -403,6 +426,11 @@ var bekreftNr = null, bekreftFrist = 0;
 var sokTekst = '';
 var gruppering = 'sammenlagt';
 var sisteHtml = null;
+var sisteFaner = null;
+
+/* Egen adresse for publikum: /resultat viser bare resultatlista, uten
+   innlogging og uten spor av tidtakingsverktøyet. */
+var offentligModus = (location.pathname.replace(/\/$/, '') === '/resultat');
 
 var DOBBEL_SPERRE_MS = 60000;   // ingen kan passere to ganger på ett minutt
 var RING_VINDU_MS = 60000;      // hvor lenge før forventet ankomst ringen fylles
@@ -443,9 +471,16 @@ function tegn(){
   var faner = mineFaner();
   if (faner.indexOf(aktivFane) < 0) aktivFane = faner[0];
 
-  el('faner').innerHTML = faner.map(function(id){
-    return '<button data-fane="' + id + '" class="' + (id===aktivFane?'aktiv':'') + '">' + ALLE_FANER[id] + '</button>';
-  }).join('');
+  // Faneraden bygges bare når den faktisk endrer seg. Ble den revet ned og satt
+  // opp igjen ved hver tegning, forsvant knappen under fingeren fire ganger i
+  // sekundet, og trykk gikk tapt.
+  var fanesignatur = faner.join(',') + '|' + aktivFane;
+  if (fanesignatur !== sisteFaner){
+    el('faner').innerHTML = faner.map(function(id){
+      return '<button data-fane="' + id + '" class="' + (id===aktivFane?'aktiv':'') + '">' + ALLE_FANER[id] + '</button>';
+    }).join('');
+    sisteFaner = fanesignatur;
+  }
 
   el('toppNavn').textContent = minOkt ? (minOkt.navn + ' · ' + rolleNavn(minOkt.rolle)) : (l.navn || 'Godlia Rundt');
 
@@ -478,7 +513,7 @@ function rolleNavn(r){
 }
 
 function advarsler(){
-  if (aktivFane === 'logginn') return '';
+  if (aktivFane === 'logginn' || offentligModus) return '';
   var ut = '';
   if (!token && aktivFane === 'resultat'){
     ut += '<div class="banner advarsel ikkePrint">Du ser på resultatene. '
@@ -498,7 +533,10 @@ function advarsler(){
 
 /* ------------------------------------------------------------- innlogging */
 function htmlLoggInn(){
-  return '<div class="kort"><h2>Logg inn</h2>'
+  return '<div class="kort" style="text-align:center;padding-top:18px">'
+    + '<img src="logo.png" alt="Golia Vel" style="max-width:230px;width:60%;height:auto">'
+    + '<div style="font-weight:700;font-size:18px;margin-top:6px">' + esc(lop().navn) + '</div></div>'
+    + '<div class="kort"><h2>Logg inn</h2>'
     + '<p class="svak" style="font-size:14px">Begge postene logger inn på samme løp. '
     + 'Velg hvilken post du bemanner.</p>'
     + '<label class="felt">Navn eller post<input id="innNavn" placeholder="For eksempel Kari, startpost" autocomplete="off"></label>'
@@ -543,9 +581,10 @@ function htmlRutenett(l){
     h += '<div class="kort"><h2>Tider uten startnummer</h2>'
       + '<p class="svak" style="font-size:13px;margin:0 0 8px">Velg en tid, og trykk deretter på rytteren den tilhører.</p>'
       + '<div class="banketListe">' + banket.map(function(p){
+          // alderen fylles av tikk(), slik at rutenettet under ikke tegnes om
           return '<button class="banketChip ' + (p.id===valgtBanket?'valgt':'') + '" data-banket="' + esc(p.id) + '">'
             + '<div class="tid">' + F.klokkeslett(p.tid, true) + '</div>'
-            + '<div class="alder">' + Math.max(0, Math.round((naa-p.tid)/1000)) + ' s siden</div></button>';
+            + '<div class="alder" data-siden="' + p.tid + '"></div></button>';
         }).join('') + '</div>'
       + (valgtBanket ? '<div class="rad" style="margin-top:8px">'
           + '<button class="knapp mini" data-handling="velgBortBanket">Avbryt valg</button>'
@@ -557,19 +596,20 @@ function htmlRutenett(l){
     + l.deltakere.slice().sort(function(a,b){ return a.nr - b.nr; }).map(function(d){
         var t = F.tilstandFor(l, d);
         var forventet = F.forventetNeste(l, d, median);
-        var ring = 0, forfalt = false;
-        if (forventet != null){
-          ring = Math.max(0, Math.min(1, (naa - (forventet - RING_VINDU_MS)) / RING_VINDU_MS)) * 100;
-          forfalt = naa > forventet + 45000;
-        }
         var merke = t.kode === 'gronn' ? '✓'
           : t.kode === 'dns' ? 'DNS' : t.kode === 'dnf' ? 'DNF'
           : (t.kode === 'oransje' || t.kode === 'lilla') ? 'R' + t.paaRunde : '';
-        return '<button class="rute r-' + t.kode + (forfalt?' forfalt':'') + (bekreftNr===d.nr?' bekreft':'') + '"'
-          + ' data-rute="' + d.nr + '" aria-label="' + esc(d.nr + ' ' + (d.navn||'')) + '">'
-          + d.nr
+        // Ringbredden settes av tikk(), ikke her. Sto den i HTML-en, ville
+        // teksten endret seg hver frame, og hele rutenettet blitt bygget på
+        // nytt under fingeren til den som trykker.
+        return '<button class="rute r-' + t.kode + (bekreftNr===d.nr?' bekreft':'') + '"'
+          + ' data-rute="' + d.nr + '"'
+          + (forventet != null ? ' data-forv="' + forventet + '"' : '')
+          + ' aria-label="' + esc(d.nr + ' ' + (d.navn||'')) + '">'
+          + '<span class="rtall">' + d.nr + '</span>'
+          + '<span class="rnavn">' + esc(fornavn(d.navn)) + '</span>'
           + (merke ? '<span class="rmerke">' + merke + '</span>' : '')
-          + (ring > 0 ? '<span class="rring" style="width:' + ring.toFixed(0) + '%"></span>' : '')
+          + '<span class="rring"></span>'
           + '</button>';
       }).join('')
     + '</div></div>';
@@ -716,8 +756,12 @@ function htmlResultat(l){
               : x.feil ? '<span class="merke feil">tid ser feil ut</span>'
               : t.kode === 'hvit' ? '<span class="merke">ikke startet</span>'
               : '<span class="merke varsel">på runde ' + t.paaRunde + '</span>';
+            // Runde 1-tiden vises bare for innloggede poster. Ser en rytter
+            // eller en forelder tallet på den offentlige lista, vet han hva
+            // han skal treffe, og hele formatet er ødelagt.
+            var tid = (token && x.runder.length) ? F.varighet(x.runder[0]) : '';
             return '<tr><td class="tall">' + x.d.nr + '</td><td>' + esc(x.d.navn||'') + '</td><td>' + merke + '</td>'
-              + '<td class="tall">' + (x.runder.length ? F.varighet(x.runder[0]) : '') + '</td></tr>';
+              + '<td class="tall">' + tid + '</td></tr>';
           }).join('') + '</tbody></table></div>';
     }
     h += '</div>';
@@ -843,9 +887,16 @@ function htmlData(l){
     + '<button class="knapp" data-handling="eksportPasseringerCsv">Passeringer (CSV)</button></div></div>';
 
   h += '<div class="kort"><h2>Test og øving</h2><div class="rad">'
-    + '<button class="knapp" data-handling="testDeltakere">Lag 20 testryttere</button>'
-    + '<button class="knapp" data-handling="testLop">Simuler ferdig løp</button></div>'
-    + '<p class="svak" style="font-size:13px;margin-top:8px">Øv på tidtaking før løpsdagen. Nullstill etterpå.</p></div>';
+    + '<button class="knapp" data-handling="testDeltakere" data-antall="20">Lag 20 testryttere</button>'
+    + '<button class="knapp" data-handling="testDeltakere" data-antall="100">Lag 100 testryttere</button>'
+    + '<button class="knapp" data-handling="testLop">Fyll inn ferdig løp</button>'
+    + '<button class="knapp ' + (stressAktiv ? 'fare' : '') + '" data-handling="stresstest">'
+    + (stressAktiv ? 'Stopp stresstesten' : 'Stresstest i sanntid') + '</button>'
+    + '</div>'
+    + '<p class="svak" style="font-size:13px;margin-top:8px">Stresstesten spiller av hele løpet i '
+    + 'hundre ganger hastighet, med ekte trykketidspunkter. Med 100 ryttere blir det 300 hendelser '
+    + 'på under et minutt, altså langt tettere enn på løpsdagen. Se på Tidtaking eller storskjermen '
+    + 'mens den går. Nullstill etterpå.</p></div>';
 
   h += '<div class="kort"><h2>Status</h2><p class="svak" style="font-size:14px">'
     + l.deltakere.length + ' ryttere, ' + l.passeringer.length + ' passeringer, '
@@ -860,6 +911,11 @@ function htmlData(l){
       }).join('') + '</div>'
     : '<p class="tom">Tom.</p>') + '</div>';
   return h;
+}
+
+function fornavn(navn){
+  var s = String(navn || '').trim();
+  return s ? s.split(/\s+/)[0] : '';
 }
 
 function kort(tittel, innhold){
@@ -1217,8 +1273,9 @@ function handling(navn, node){
   if (navn === 'eksportResultatCsv') return eksporterResultatCsv(l);
   if (navn === 'eksportPasseringerCsv') return eksporterPasseringerCsv(l);
   if (navn === 'eksportDeltakereCsv') return eksporterDeltakereCsv(l);
-  if (navn === 'testDeltakere') return lagTestdeltakere(l);
+  if (navn === 'testDeltakere') return lagTestdeltakere(l, Number(node.getAttribute('data-antall')) || 20);
   if (navn === 'testLop') return simulerLop(l);
+  if (navn === 'stresstest') return stresstest(l);
 
   if (navn === 'nullstill'){
     if (!confirm('Nullstille løpet for alle poster?')) return;
@@ -1328,16 +1385,102 @@ function eksporterDeltakereCsv(l){
 }
 
 /* --------------------------------------------------------------- testdata */
-var TESTNAVN = ['Kari Nordmann','Ola Hansen','Ingrid Lie','Jonas Berg','Mette Aas','Petter Solheim',
-  'Silje Moen','Anders Vik','Hanne Ruud','Erik Dahl','Tove Lund','Bjørn Ness','Emma Strand','Noah Haug',
-  'Sofie Bakke','Filip Sund','Nora Hagen','Oskar Lien','Thea Rygg','Mathias Fjeld'];
+var FORNAVN = ['Kari','Ola','Ingrid','Jonas','Mette','Petter','Silje','Anders','Hanne','Erik',
+  'Tove','Bjørn','Emma','Noah','Sofie','Filip','Nora','Oskar','Thea','Mathias','Live','Jakob',
+  'Amalie','Henrik','Maja','Elias','Ida','Aksel','Selma','Theodor','Frida','Magnus','Vilde','Sander',
+  'Julie','Kasper','Leah','Even','Mia','Herman','Hedda','Iver','Tuva','Sigurd','Ella','Johannes',
+  'Linnea','Kristian','Alma','Marius'];
+var ETTERNAVN = ['Nordmann','Hansen','Lie','Berg','Aas','Solheim','Moen','Vik','Ruud','Dahl',
+  'Lund','Ness','Strand','Haug','Bakke','Sund','Hagen','Lien','Rygg','Fjeld'];
 
-function lagTestdeltakere(l){
+function lagTestdeltakere(l, antall){
+  antall = antall || 20;
   var start = F.nesteLedigeNr(l);
-  send({ type:'leggTilDeltakere', tid:na(), liste: TESTNAVN.map(function(n,i){
-    return { nr: start + i, navn: n, alder: 8 + (i % 9), klasse: i%2 ? 'Gutter' : 'Jenter' };
-  })});
-  varsle('La inn ' + TESTNAVN.length + ' testryttere.');
+  var liste = [];
+  for (var i = 0; i < antall; i++){
+    liste.push({
+      nr: start + i,
+      navn: FORNAVN[i % FORNAVN.length] + ' ' + ETTERNAVN[(i * 7) % ETTERNAVN.length],
+      alder: 6 + (i % 11),
+      klasse: i % 2 ? 'Gutter' : 'Jenter'
+    });
+  }
+  send({ type:'leggTilDeltakere', tid:na(), liste:liste });
+  varsle('La inn ' + antall + ' testryttere.');
+}
+
+/* Stresstest: spiller av et helt løp i komprimert sanntid, med ekte trykk-
+   tidspunkter. Poenget er ikke resultatlista, men å se om køen, serveren og
+   live-strømmen holder når hendelsene kommer tett. 100 ryttere gir 300
+   hendelser, og på 100x fart kommer de omtrent 8 ganger raskere enn på
+   løpsdagen. Holder det her, er løpsdagen triviell. */
+var stressAktiv = false;
+var stressTimere = [];
+
+function stresstest(l){
+  if (stressAktiv){ stoppStresstest(); return; }
+  if (!l.deltakere.length){ varsle('Lag testryttere først.'); return; }
+  if (!confirm('Dette fyller løpet med testdata for ' + l.deltakere.length
+    + ' ryttere, i komprimert sanntid. Nullstill etterpå. Fortsette?')) return;
+
+  var FART = 100;
+  var mellomrom = Number(l.intervallSek || 30) * 1000 / FART;
+  var rundeBasis = Number(l.antattRundeMin || 5) * 60000 / FART;
+  var behov = F.passeringsBehov(l);
+  var ryttere = F.aktive(l);
+
+  stressAktiv = true;
+  stressTimere = [];
+  var planlagt = 0, sendt = 0;
+  var startet = Date.now();
+
+  function planlegg(fn, om){
+    planlagt++;
+    stressTimere.push(setTimeout(function(){
+      if (!stressAktiv) return;
+      fn();
+      sendt++;
+      if (sendt >= planlagt) ferdig();
+    }, om));
+  }
+
+  function ferdig(){
+    if (!stressAktiv) return;
+    stressAktiv = false;
+    var sek = (Date.now() - startet) / 1000;
+    varsle(sendt + ' hendelser på ' + sek.toFixed(1) + ' s (' + (sendt/sek).toFixed(1)
+      + ' i sekundet), ' + koe.length + ' igjen i kø');
+    sisteHtml = null; tegn();
+  }
+
+  ryttere.forEach(function(d, i){
+    var egenRunde = rundeBasis * (0.8 + Math.random() * 0.4);
+    var t = i * mellomrom;
+    if (l.tidtakingModus !== 'malstrek'){
+      planlegg(function(){ send({ type:'start', nr:d.nr, tid:na() }); }, t);
+    }
+    for (var r = 0; r < behov; r++){
+      var erKlokkestart = (l.tidtakingModus === 'malstrek' && r === 0);
+      // avviket rytteren faktisk klarer: noen treffer, andre bommer grovt
+      var slark = (r === 0 || erKlokkestart) ? 0 : (Math.random() - 0.5) * egenRunde * 0.12;
+      t += erKlokkestart ? rundeBasis * 0.2 : egenRunde + slark;
+      planlegg(function(){
+        send({ type:'passering', id:lagHid(), tid:na(), nr:d.nr, kilde:'stress' });
+      }, t);
+    }
+  });
+
+  varsle('Stresstest i gang: ' + planlagt + ' hendelser over cirka '
+    + Math.round((ryttere.length * mellomrom + behov * rundeBasis) / 1000) + ' sekunder');
+  sisteHtml = null; tegn();
+}
+
+function stoppStresstest(){
+  stressAktiv = false;
+  stressTimere.forEach(function(t){ clearTimeout(t); });
+  stressTimere = [];
+  varsle('Stresstesten er stoppet.');
+  sisteHtml = null; tegn();
 }
 
 function simulerLop(l){
@@ -1364,6 +1507,28 @@ function simulerLop(l){
 /* =========================================================================
    Tikk og oppstart
    ========================================================================= */
+/* Alt som beveger seg av seg selv oppdateres her, direkte på nodene. Det som
+   ligger i HTML-strengen skal bare endre seg når tilstanden endrer seg, ellers
+   bygges rutenettet på nytt midt i et trykk. */
+function oppdaterLevende(){
+  var naa = na();
+  var ruter = document.querySelectorAll('.rute[data-forv]');
+  for (var i = 0; i < ruter.length; i++){
+    var forventet = Number(ruter[i].getAttribute('data-forv'));
+    var andel = Math.max(0, Math.min(1, (naa - (forventet - RING_VINDU_MS)) / RING_VINDU_MS));
+    var ring = ruter[i].firstElementChild ? ruter[i].querySelector('.rring') : null;
+    if (ring) ring.style.width = (andel * 100).toFixed(0) + '%';
+    var forfalt = naa > forventet + 45000;
+    if (ruter[i].classList.contains('forfalt') !== forfalt) ruter[i].classList.toggle('forfalt', forfalt);
+  }
+  var aldre = document.querySelectorAll('[data-siden]');
+  for (var j = 0; j < aldre.length; j++){
+    var sek = Math.max(0, Math.round((naa - Number(aldre[j].getAttribute('data-siden'))) / 1000));
+    var tekst = sek + ' s siden';
+    if (aldre[j].textContent !== tekst) aldre[j].textContent = tekst;
+  }
+}
+
 function tikk(){
   el('toppKlokke').textContent = F.klokkeslett(na());
 
@@ -1372,6 +1537,7 @@ function tikk(){
   if (aktivFane === 'rutenett'){
     var a = document.activeElement;
     if (!a || !/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) tegn();
+    oppdaterLevende();
   }
   if (aktivFane === 'start'){
     var boks = el('sidenStart');
