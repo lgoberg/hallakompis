@@ -8,6 +8,11 @@ async function proxy(req: NextRequest, ctx: { params: Promise<{ path: string[] }
   const targetUrl = `${API_BASE}/${path.join('/')}${search}`;
 
   const headers = new Headers(req.headers);
+  // Host må vekk, ellers svarer API-et på feil vert. Men da mister API-et
+  // vissheten om hvilket domene brukeren faktisk står på, og det trenger den
+  // for å sette husstandskapselen på .hallakompis.no. Derfor sendes den videre.
+  const opprinneligVert = req.headers.get('host');
+  if (opprinneligVert) headers.set('x-forwarded-host', opprinneligVert);
   headers.delete('host');
   headers.delete('connection');
 

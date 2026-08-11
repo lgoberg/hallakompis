@@ -4,7 +4,7 @@ import crypto from 'node:crypto';
 import { db, users, households, sessions } from '@hallakompis/db';
 import { eq } from 'drizzle-orm';
 import { createSession, hashToken, COOKIE_NAME } from '../lib/auth.js';
-import { lagKapsel, kapselDomene, HUSSTAND_KAPSEL } from '../lib/husstandskapsel.js';
+import { lagKapsel, kapselDomene, offentligVert, HUSSTAND_KAPSEL } from '../lib/husstandskapsel.js';
 
 const SelectUserBody = z.object({
   userId: z.string().uuid(),
@@ -68,7 +68,7 @@ export async function authRoutes(app: FastifyInstance) {
     // Husstandskapselen i tillegg: den er det de andre tjenestene leser.
     // Mangler hemmeligheten, settes den ikke, og da er alt som før.
     const hemmelighet = process.env.HALLAKOMPIS_SECRET;
-    const domene = kapselDomene(req.headers.host);
+    const domene = kapselDomene(offentligVert(req.headers));
     if (hemmelighet && domene) {
       const kapsel = lagKapsel(
         {
@@ -110,7 +110,7 @@ export async function authRoutes(app: FastifyInstance) {
     }
     reply.clearCookie(COOKIE_NAME, { path: '/' });
     // logger du ut i Kompis, skal du være ute overalt
-    const domene = kapselDomene(req.headers.host);
+    const domene = kapselDomene(offentligVert(req.headers));
     if (domene) reply.clearCookie(HUSSTAND_KAPSEL, { path: '/', domain: domene });
     return { ok: true };
   });

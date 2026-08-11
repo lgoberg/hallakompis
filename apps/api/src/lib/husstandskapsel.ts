@@ -60,3 +60,17 @@ export function kapselDomene(vertsnavn: string | undefined): string | undefined 
   const vert = (vertsnavn.split(':')[0] ?? '').toLowerCase();
   return vert === 'hallakompis.no' || vert.endsWith('.hallakompis.no') ? '.hallakompis.no' : undefined;
 }
+
+/**
+ * Hvilken vert brukeren faktisk står på.
+ *
+ * Kompis-webben proxyer alle API-kall og MÅ slette host-headeren, ellers svarer
+ * API-et på feil vert. Da er host her den interne adressen, ikke
+ * kompis.hallakompis.no, og kapselen ville aldri blitt satt. Proxyen sender
+ * derfor den opprinnelige verten videre som x-forwarded-host, og den vinner.
+ */
+export function offentligVert(headers: Record<string, unknown>): string | undefined {
+  const fra = headers['x-forwarded-host'] ?? headers['host'];
+  const verdi = Array.isArray(fra) ? fra[0] : fra;
+  return typeof verdi === 'string' ? verdi.split(',')[0]?.trim() : undefined;
+}
