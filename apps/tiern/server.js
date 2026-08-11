@@ -17,6 +17,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const HUS = require('./husstand.js');
 
 /* Claude skriver karakterboka. Lastes defensivt: mangler pakken eller
    noekkelen, faller appen tilbake paa de haandskrevne reglene i klienten og
@@ -343,6 +344,9 @@ function reinFodselsaar(v) {
 
 const tjener = http.createServer(async (req, res) => {
   const sti = decodeURIComponent((req.url || '/').split('?')[0]);
+
+  // /health maa svare uten innlogging, ellers tror Northflank at appen er nede
+  if (sti !== '/health' && !HUS.krevHusstand(req, res)) return;
 
   if (sti === '/health') {
     let skrivbar = false;

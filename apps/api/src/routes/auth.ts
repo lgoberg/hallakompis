@@ -4,6 +4,7 @@ import crypto from 'node:crypto';
 import { db, users, households, sessions } from '@hallakompis/db';
 import { eq } from 'drizzle-orm';
 import { createSession, hashToken, COOKIE_NAME } from '../lib/auth.js';
+import { lagKapsel, kapselDomene, HUSSTAND_KAPSEL } from '../lib/husstandskapsel.js';
 
 const SelectUserBody = z.object({
   userId: z.string().uuid(),
@@ -64,6 +65,32 @@ export async function authRoutes(app: FastifyInstance) {
       expires: expiresAt,
     });
 
+    // Husstandskapselen i tillegg: den er det de andre tjenestene leser.
+    // Mangler hemmeligheten, settes den ikke, og da er alt som før.
+    const hemmelighet = process.env.HALLAKOMPIS_SECRET;
+    const domene = kapselDomene(req.headers.host);
+    if (hemmelighet && domene) {
+      const kapsel = lagKapsel(
+        {
+          husstand: user.householdId,
+          person: user.id,
+          navn: user.displayName ?? user.name,
+          rolle: user.role as 'adult' | 'child',
+        },
+        hemmelighet
+      );
+      reply.setCookie(HUSSTAND_KAPSEL, kapsel.verdi, {
+        // ikke httpOnly: portalen skal kunne vise hvem du er uten et API-kall,
+        // og kapselen inneholder ingenting hemmelig, bare navnet ditt
+        httpOnly: false,
+        secure: true,
+        sameSite: 'lax',
+        path: '/',
+        domain: domene,
+        expires: kapsel.utloper,
+      });
+    }
+
     return {
       user: {
         id: user.id,
@@ -82,6 +109,9 @@ export async function authRoutes(app: FastifyInstance) {
       await db.delete(sessions).where(eq(sessions.tokenHash, th));
     }
     reply.clearCookie(COOKIE_NAME, { path: '/' });
+    // logger du ut i Kompis, skal du være ute overalt
+    const domene = kapselDomene(req.headers.host);
+    if (domene) reply.clearCookie(HUSSTAND_KAPSEL, { path: '/', domain: domene });
     return { ok: true };
   });
 }

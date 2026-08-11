@@ -19,6 +19,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const HUS = require('./husstand.js');
 
 const PORT = Number(process.env.PORT) || 4720;
 const ROT = __dirname;
@@ -472,6 +473,9 @@ function stemmerForSjanger(sjangerId) {
 const tjener = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://x');
   const sti = decodeURIComponent(url.pathname);
+
+  // /health maa svare uten innlogging, ellers tror Northflank at appen er nede
+  if (sti !== '/health' && !HUS.krevHusstand(req, res)) return;
 
   if (sti === '/health') {
     let skrivbar = false;
