@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { api, type Me, type Task, type ShoppingItem, type ChatResponse } from '@/lib/api';
 import { useVoice, type VoiceControls } from '@/lib/voice';
+import { trygtRetursted } from '@/lib/retur';
 
 interface ChatMsg {
   role: 'user' | 'kompis';
@@ -40,6 +41,26 @@ export default function PortalClient({ me }: { me: Me }) {
 
   useEffect(() => {
     refreshData();
+  }, []);
+
+  /* Husstandskapselen må hentes fra NETTLESEREN, ikke fra serveren.
+     Toppsiden kaller /me server-side for å tegne dashbordet, men en kapsel satt
+     der havner hos serveren og aldri hos deg. Derfor dette ene kallet gjennom
+     proxyen: det er det som gir deg kapselen hvis økten din er eldre enn
+     ordningen, og det er det som fornyer den ved hvert besøk.
+
+     Kom du hit fordi en annen tjeneste sendte deg til innlogging, sendes du
+     videre dit så snart kapselen sitter. */
+  useEffect(() => {
+    let avbrutt = false;
+    api.get('/me')
+      .then(() => {
+        if (avbrutt) return;
+        const retur = trygtRetursted(new URLSearchParams(window.location.search).get('retur'));
+        if (retur) window.location.href = retur;
+      })
+      .catch(() => { /* dashbordet er alt tegnet, dette gjelder bare kapselen */ });
+    return () => { avbrutt = true; };
   }, []);
 
   useEffect(() => {

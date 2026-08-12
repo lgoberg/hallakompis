@@ -1,11 +1,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { api, type Household, type Member } from '@/lib/api';
+import { trygtRetursted, stedsnavn } from '@/lib/retur';
 
 export default function LoginPage() {
   const router = useRouter();
+  const sok = useSearchParams();
+  // Gaten i de andre tjenestene sender deg hit med ?retur=, slik at et klikk
+  // på et kortspill ender i kortspillet og ikke her.
+  const retur = trygtRetursted(sok.get('retur'));
   const [household, setHousehold] = useState<Household | null>(null);
   const [selected, setSelected] = useState<Member | null>(null);
   const [pin, setPin] = useState('');
@@ -31,6 +36,9 @@ export default function LoginPage() {
     setError(null);
     try {
       await api.post('/auth/select-user', { userId: m.id, pin: pinCode || undefined });
+      // hard navigering, ikke router.push: retursteder ligger på andre
+      // subdomener, og Next-ruteren kjenner bare sine egne sider
+      if (retur) { window.location.href = retur; return; }
       router.push('/');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Noe gikk galt');
@@ -66,16 +74,17 @@ export default function LoginPage() {
           loading={loading}
         />
       ) : (
-        <UserGrid household={household} onSelect={selectUser} error={error} />
+        <UserGrid household={household} onSelect={selectUser} error={error} paaVeiTil={stedsnavn(retur)} />
       )}
     </main>
   );
 }
 
-function UserGrid({ household, onSelect, error }: {
+function UserGrid({ household, onSelect, error, paaVeiTil }: {
   household: Household;
   onSelect: (m: Member) => void;
   error: string | null;
+  paaVeiTil?: string | null;
 }) {
   return (
     <div className="max-w-3xl px-10 text-center">
@@ -87,7 +96,7 @@ function UserGrid({ household, onSelect, error }: {
         Hvem er du, <em className="text-copper">i dag</em>?
       </h1>
       <p className="font-display italic text-lg text-ink-soft mb-11">
-        Hver har sin egen Kompis.
+        {paaVeiTil ? `Velg deg selv, så sender vi deg videre til ${paaVeiTil}.` : 'Hver har sin egen Kompis.'}
       </p>
       {error && <div className="text-coral text-sm mb-6">{error}</div>}
       <div className="grid grid-cols-5 gap-4 max-w-2xl mx-auto">

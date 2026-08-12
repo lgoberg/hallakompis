@@ -18,13 +18,26 @@ async function fetchMe(cookieHeader: string): Promise<Me | null> {
   }
 }
 
-export default async function PortalPage() {
+export default async function PortalPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const c = await cookies();
-  if (!c.has('hallakompis_session')) redirect('/login');
+
+  /* Kom du hit fra en annen tjeneste, ligger målet i ?retur=. Det må følge med
+     videre til innloggingen, ellers havner du på dashbordet etterpå i stedet
+     for der du egentlig skulle. Adressen sjekkes i trygtRetursted der den
+     faktisk brukes; her bæres den bare videre. */
+  const sp = await searchParams;
+  const raa = Array.isArray(sp.retur) ? sp.retur[0] : sp.retur;
+  const tilInnlogging = raa ? `/login?retur=${encodeURIComponent(raa)}` : '/login';
+
+  if (!c.has('hallakompis_session')) redirect(tilInnlogging);
 
   const cookieHeader = c.getAll().map((x) => `${x.name}=${x.value}`).join('; ');
   const me = await fetchMe(cookieHeader);
-  if (!me) redirect('/login');
+  if (!me) redirect(tilInnlogging);
 
   return <PortalClient me={me} />;
 }
