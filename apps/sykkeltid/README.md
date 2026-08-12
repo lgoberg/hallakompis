@@ -11,29 +11,41 @@ også fri, send ut den som er klar.
 ## Kom i gang
 
 ```bash
-node sykkeltid/server.js
+node apps/sykkeltid/server.js
 ```
 
 Serveren starter på `http://localhost:4600` og skriver ut innloggingskoden.
 Standardkoden er `sykkel`. Sett din egen med `SYKKELTID_KODE`:
 
 ```bash
-SYKKELTID_KODE=godlia2026 node sykkeltid/server.js
+SYKKELTID_KODE=godlia2026 node apps/sykkeltid/server.js
 ```
 
 Ingen `npm install` er nødvendig. Systemet bruker bare Node sine egne moduler
 og trenger Node 18 eller nyere.
 
+## Innlogging
+
+Alle postene logger inn med **samme kode, som arrangør**, og ser det samme.
+Navnet du skriver inn er bare til loggen, så dere i ettertid kan se hvem som
+registrerte hva.
+
+Resultatlista og storskjermen er åpne for alle uten innlogging. Bare det å
+registrere noe krever koden.
+
 ## De tre flatene
 
-**Startposten** (telefon) får en rullbar liste over alle som ikke er sendt ut,
-med nummer, navn og alder. Trykk på raden når rytteren slippes. Øverst står en
+Alle tre er tilgjengelige for alle som er logget inn. Det er faner, ikke
+roller.
+
+**Start** (telefon) er en rullbar liste over alle som ikke er sendt ut, med
+nummer, navn og løype. Trykk på raden når rytteren slippes. Øverst står en
 teller for hvor lenge siden forrige start gikk, som blir grønn når det er gått
 så lenge som det anbefalte mellomrommet. Den telleren er viktigere enn den ser
 ut: mellomrommet ved start er det som avgjør hvor hardt målposten blir
 belastet.
 
-**Målposten** (helst nettbrett) får et rutenett med alle startnumrene. Fargen
+**Tidtaking** (helst nettbrett) er et rutenett med alle startnumrene. Fargen
 viser hvor rytteren er:
 
 | Farge | Betydning |
@@ -46,23 +58,38 @@ viser hvor rytteren er:
 Ett trykk flytter rytteren ett hakk. Rutene ligger fast og sorterer seg aldri
 om, slik at fingeren lærer hvor tallene er.
 
+I ruta står også en tid: **runde 1 mens rytteren er ute**, og **differansen
+når han er i mål**. Differansen er selve resultatet i et idealtidsløp, så den
+hører hjemme der øyet allerede er.
+
 **Storskjermen** ligger på `/tv` og krever ingen innlogging. Den veksler
 mellom rutenettet og resultatlistene. Kjør den helst fra en laptop på HDMI.
 Nettleseren i en TV er ofte gammel og upålitelig, og skjermsparere slår inn.
+
+Har dere ingen skjerm, skriv ut **plakaten** på `/plakat` og heng den opp ved
+målstreken. Publikum skanner QR-koden og får samme visning på sin egen
+telefon. `/tv` er bygget for å fungere stående i hånda, ikke bare på en vegg.
 
 ## Hvordan et løp gjennomføres
 
 ### Før løpsdagen
 
-1. Legg inn startlista under **Deltakere**. Du kan lime inn rett fra regneark:
-   `startnr;navn;alder;klasse`, én rytter per linje. Alder og klasse kan stå i
-   hvilken som helst rekkefølge, og kan sløyfes.
-2. Sett navn, dato, antall runder og antatt rundetid under **Oppsett**.
-3. Sett aldersgruppene, for eksempel `6-9, 10-12, 13-15, 16+`. Resultatlista
-   kan vises sammenlagt eller delt i disse gruppene. Grupperingen påvirker
-   ikke tidtakinga, bare hvordan resultatene sorteres, så den kan endres når
-   som helst, også etter at løpet er ferdig.
-4. Øv. Under **Data** kan du lage 20 testryttere og simulere et helt løp.
+1. Sett navn, dato, antall runder og antatt rundetid under **Oppsett**.
+2. Sett **løypene** samme sted, som en kommaseparert liste. Standard er
+   `Kort, Lang`, men navnene er dine, og en tredje løype er bare et komma unna.
+   Gjør dette før du limer inn startlista, så leses løypa rett fra lista.
+3. Legg inn startlista under **Deltakere**. Du kan lime inn rett fra regneark:
+   `startnr;navn;løype;klasse`, én rytter per linje. Feltene etter navnet kan
+   stå i hvilken som helst rekkefølge, og kan sløyfes. Et tall på ett eller to
+   siffer leses som alder, en tekst som matcher et løypenavn leses som løype,
+   resten blir klasse.
+
+   Skriver du løypenavnet annerledes enn i Oppsett, sier appen fra med hvor
+   mange som ikke fikk løype. Ingenting går tapt, og du kan sette løypa
+   etterpå med velgeren i deltakerlista.
+4. Grupperingen påvirker ikke tidtakinga, bare hvordan resultatene sorteres.
+   Den kan endres når som helst, også etter at løpet er ferdig.
+5. Øv. Under **Data** kan du lage 20 testryttere og simulere et helt løp.
    Nullstill etterpå.
 
 ### Løypa må stemme
@@ -99,8 +126,19 @@ et sekund av gangen, slette en passering, eller sette DNF og DNS.
 ### Etter løpet
 
 Resultatlista er ferdig i det siste rytteren er registrert. Velg
-**Sammenlagt**, **Aldersgrupper** eller **Klasser**, skriv ut, og last ned CSV.
-Last også ned hele løpet som fil under **Data**.
+**Sammenlagt**, **Løyper** eller **Klasser**, skriv ut, og last ned CSV. Last
+også ned hele løpet som fil under **Data**.
+
+Når alle er i mål, dukker det opp en knapp: **Erklær løpet fullført**. Den
+låser rutenettet, så et uhellstrykk etter siste målgang ikke kan endre et
+resultat som allerede er lest opp, og resultatlista bytter fra «Foreløpig
+stilling» til «Endelig resultat» også for publikum. Løpet kan åpnes igjen når
+som helst under **Data**.
+
+Skal dere kjøre et heat til med de samme rytterne, bruk **Nullstill tidene,
+behold startlista** under Data. Den sletter tider og starter, men beholder
+rytterne, løypene og resten av oppsettet. **Slett alt** tømmer også
+startlista.
 
 ## Bemanning og belastning
 
@@ -111,9 +149,10 @@ hvert tiende sekund** i snitt, rundt 300 trykk totalt.
 
 Det krever to personer: en som roper nummer og en som trykker. Går dere ned
 til 20 sekunders mellomrom for å bli fortere ferdig, blir det et trykk hvert
-sjuende sekund, og det er for hardt. Er aldersspennet stort, med noen på fem
-minutter og noen på åtte, blir det mye innhenting og klynging ved streken. Da
-er puljer per aldersgruppe det enkleste grepet.
+sjuende sekund, og det er for hardt. Er spennet i rundetid stort, med noen på
+fem minutter og noen på åtte, blir det mye innhenting og klynging ved streken.
+Da er puljer per løype det enkleste grepet: send ut den korte løypa samlet,
+så den lange.
 
 **Bare én enhet skal registrere passeringer.** En reserveenhet kan gjerne logge
 inn og ligge klar, den ser samme løp og kan overta umiddelbart hvis den første
@@ -146,9 +185,19 @@ fortsetter alt som normalt: registreringene legges i kø, lagres i enheten og
 sendes automatisk når linja er tilbake. Køen overlever at nettleseren startes
 på nytt. Toppfeltet viser alltid om noe ligger usendt.
 
-**Storskjermen lekker ikke.** Ryttere som fortsatt er ute vises aldri med
-tider. Hele formatet hviler på at du ikke kjenner din egen rundetid underveis,
-og det holder ikke å la være å rope det ut hvis tallet står på veggen.
+**Ingen får vite sin egen rundetid underveis.** Hele formatet hviler på det:
+vet du at runde 1 tok 5:12, sikter du deg inn på 5:12 i stedet for å sykle
+jevnt, og idealtid er ikke lenger idealtid.
+
+Det holder ikke å la være å vise tallet på skjermen. Ryttere som fortsatt er
+ute får tidsstemplene sine **sladdet i selve API-et** for alle som ikke er
+logget inn, både i `/api/tilstand` og i live-strømmen. Antall passeringer og
+det at de har startet er beholdt, så farger og tellere stemmer. De som er i
+mål beholder tidene sine, for da er resultatet uansett offentlig.
+
+Dette ble alvorlig i det vi hengte opp en QR som sender hvert eneste publikum,
+og dermed hver eneste rytter, til den adressen. Lager du et nytt endepunkt som
+gir ut løpsdata, må det gjennom samme sladding.
 
 **Strømbrudd.** Serveren lagrer ved hver endring, skriver atomisk slik at fila
 aldri blir halvveis skrevet, og tar en full kopi hvert femte minutt under
@@ -179,10 +228,12 @@ Skal du kjøre to løp samtidig, start to instanser med hver sin
 
 | Fil | Innhold |
 |---|---|
-| `server.js` | HTTP, innlogging, live-strøm, lagring |
+| `server.js` | HTTP, innlogging, live-strøm, lagring, sladding av tider |
 | `felles.js` | Modell, regelmotor og utregninger, delt mellom server og klient |
-| `index.html` | Klienten for startposten og målposten |
-| `tv.html` | Storskjermvisningen |
+| `index.html` | Appen for arrangøren: start, tidtaking, resultat, oppsett |
+| `tv.html` | Storskjermen, som også fungerer stående på telefon |
+| `plakat.html` | A4-plakat med QR til storskjermen, til utskrift |
+| `qr.js` | QR-generator i ren JS, uten avhengigheter |
 | `sw.js` | Cacher appskallet så den laster uten dekning |
 
 `felles.js` kjører begge steder med vilje. Klienten bruker samme regler som
