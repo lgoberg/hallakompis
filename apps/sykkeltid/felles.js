@@ -37,6 +37,10 @@
       // 'startsted' = klokka gaar naar startposten sender rytteren ut
       // 'malstrek'  = klokka gaar fra foerste passering av tidtakerstreken
       tidtakingModus: 'startsted',
+      // Tidspunktet loepet ble erklaert ferdig, eller null. Da laases rutenettet,
+      // slik at et feiltrykk etter siste maalgang ikke kan endre et resultat
+      // som allerede er lest opp.
+      fullfort: null,
       deltakere: [],    // {nr, navn, alder, klasse, startPos, faktiskStart, status}
       passeringer: [],  // {id, tid, nr, kilde, av}
       slettede: [],     // id-er som er slettet, hindrer at retry gjenoppliver dem
@@ -189,6 +193,17 @@
         lop.deltakere = beholdt;
         break;
 
+      /* Fullfoert loep laaser rutenettet. Ikke fordi noen skal hindres, men
+         fordi et uhell etter siste maalgang ellers kan endre et resultat som
+         allerede er lest opp. Den kan aapnes igjen naar som helst. */
+      case 'fullfor':
+        lop.fullfort = h.tid || Date.now();
+        break;
+
+      case 'apne':
+        lop.fullfort = null;
+        break;
+
       default:
         return false;
     }
@@ -211,7 +226,9 @@
       case 'tildel': return h.nr == null ? 'Fjernet nummer' : 'Ga tiden til nr ' + h.nr;
       case 'settTid': return 'Justerte en tid';
       case 'slettPassering': return 'Slettet en passering';
-      case 'nullstill': return 'Nullstilte løpet';
+      case 'nullstill': return h.beholdDeltakere ? 'Nullstilte tidene, beholdt startlista' : 'Nullstilte hele løpet';
+      case 'fullfor': return 'Erklærte løpet fullført';
+      case 'apne': return 'Åpnet løpet igjen';
       default: return h.type;
     }
   }
@@ -412,6 +429,29 @@
     return fortegn + (abs / 1000).toFixed(1).replace('.', ',') + ' s';
   }
 
+  /* Kort tid til rutenettet. Underveis: runde 1, altsaa det rytteren skal
+     forsoeke aa gjenta. I maal: hvor naer han kom, som er selve resultatet.
+     Teksten maa vaere kort, for ruta er under seksti piksler bred.
+
+     Verdien er STATISK: den endrer seg bare naar en passering registreres,
+     aldri fra sekund til sekund. Det er grunnen til at den trygt kan staa i
+     rutenettets HTML. Hadde den tikket, matte den vaert skrevet av tikk(),
+     ellers ville hele rutenettet blitt bygget om under fingeren til den som
+     trykker. */
+  function ruteTid(lop, d) {
+    if (d.status !== 'OK') return '';
+    var runder = runderFor(lop, d);
+    if (!runder.length) return '';
+    var antall = Number(lop.antallRunder);
+    if (runder.length < antall) return varighet(runder[0], true);
+
+    if (antall === 2) return avviksTekst(runder[1] - runder[0]);
+    // flere enn to runder: samlet avvik fra runde 1, uten fortegn
+    var sum = 0;
+    for (var i = 1; i < antall; i++) sum += Math.abs(runder[i] - runder[0]);
+    return sekTekst(sum) + ' s';
+  }
+
   function sekTekst(ms) {
     if (ms == null || isNaN(ms)) return '';
     return (ms / 1000).toFixed(1).replace('.', ',');
@@ -438,6 +478,7 @@
     klokkeslett: klokkeslett,
     varighet: varighet,
     avviksTekst: avviksTekst,
+    ruteTid: ruteTid,
     sekTekst: sekTekst,
     iDag: iDag,
     toSiffer: toSiffer

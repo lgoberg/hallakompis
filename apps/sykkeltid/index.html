@@ -121,6 +121,13 @@ label.felt input, label.felt select, label.felt textarea{
   display:block; font-size:11px; font-weight:600; opacity:.8; margin-top:2px;
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
+/* Tiden står under navnet: runde 1 mens rytteren er ute, differansen når han
+   er i mål. Tabulære tall så kolonnen ikke hopper når sifrene endrer seg. */
+.rute .rtid{
+  display:block; font-size:11px; font-weight:700; opacity:.95; margin-top:1px;
+  font-variant-numeric:tabular-nums; white-space:nowrap; overflow:hidden;
+  min-height:13px;
+}
 .rute .rmerke{
   position:absolute; top:3px; right:5px; font-size:10px; font-weight:800;
   letter-spacing:.03em; opacity:.9;
@@ -360,8 +367,7 @@ function hent(sti, valg){
 }
 
 function lagHid(){
-  return (minOkt && minOkt.rolle ? minOkt.rolle[0] : 'x')
-    + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  return 'a' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
 
 var angreStabel = [];
@@ -450,19 +456,17 @@ var ALLE_FANER = {
   deltakere: 'Deltakere', oppsett: 'Oppsett', data: 'Data', logginn: 'Logg inn'
 };
 
-/* Rollen bestemmer hvilken operativ flate du faar. Startposten skal ikke ha
-   rutenettet liggende, og maalposten skal ikke kunne sende ryttere ut. */
+/* Én innlogging, og alle ser alt. Vi stolte tidligere ikke på at postene holdt
+   seg til sin egen flate, og delte derfor fanene etter rolle. Det ble mer
+   friksjon enn nytte: den som står på mål trenger av og til å se startlista
+   likevel, og da måtte hun logge inn på nytt. */
 function mineFaner(){
-  var r = minOkt && minOkt.rolle;
   if (offentligModus) return ['resultat'];
   if (!token) return ['resultat','logginn'];
-  if (r === 'start') return ['start','resultat','deltakere','oppsett','data'];
-  if (r === 'mal') return ['rutenett','resultat','deltakere','oppsett','data'];
   return ['rutenett','start','resultat','deltakere','oppsett','data'];
 }
 
 var aktivFane = 'resultat';
-var valgtRolle = 'mal';
 var valgtBanket = null;
 var bekreftNr = null, bekreftFrist = 0;
 var sokTekst = '';
@@ -527,13 +531,10 @@ function tegn(){
     sisteFaner = fanesignatur;
   }
 
-  // På smal skjerm er rollen viktigere enn navnet: du må kunne se med ett blikk
-  // at du står på målposten. "Per · arr..." hjelper ingen.
+  // Navnet er det eneste som betyr noe nå: det står i loggen ved hver
+  // registrering, så dere kan se hvem som tok tiden.
   if (minOkt){
-    var r = rolleNavn(minOkt.rolle);
-    el('toppNavn').textContent = window.innerWidth < 520
-      ? r.charAt(0).toUpperCase() + r.slice(1)
-      : minOkt.navn + ' · ' + r;
+    el('toppNavn').textContent = minOkt.navn;
   }else{
     el('toppNavn').textContent = l.navn || 'Godlia Rundt';
   }
@@ -576,16 +577,12 @@ function tegn(){
   if (ny !== sisteHtml){ el('innhold').innerHTML = ny; sisteHtml = ny; }
 }
 
-function rolleNavn(r){
-  return r === 'start' ? 'startpost' : r === 'mal' ? 'målpost' : 'arrangør';
-}
-
 function advarsler(){
   if (aktivFane === 'logginn' || offentligModus) return '';
   var ut = '';
   if (!token && aktivFane === 'resultat'){
     ut += '<div class="banner advarsel ikkePrint">Du ser på resultatene. '
-      + '<button class="knapp mini" data-handling="tilLogginn">Logg inn som post</button></div>';
+      + '<button class="knapp mini" data-handling="tilLogginn">Logg inn som arrangør</button></div>';
   }
   if (token && !SYNK){
     ut += '<div class="banner stopp ikkePrint">Klokka er ikke stilt mot serveren ennå. '
@@ -604,16 +601,14 @@ function htmlLoggInn(){
   return '<div class="kort" style="text-align:center;padding-top:18px">'
     + '<img src="logo.png" alt="Golia Vel" style="max-width:230px;width:60%;height:auto">'
     + '<div style="font-weight:700;font-size:18px;margin-top:6px">' + esc(lop().navn) + '</div></div>'
-    + '<div class="kort"><h2>Logg inn</h2>'
-    + '<p class="svak" style="font-size:14px">Begge postene logger inn på samme løp. '
-    + 'Velg hvilken post du bemanner.</p>'
-    + '<label class="felt">Navn eller post<input id="innNavn" placeholder="For eksempel Kari, startpost" autocomplete="off"></label>'
+    + '<div class="kort"><h2>Logg inn som arrangør</h2>'
+    + '<p class="svak" style="font-size:14px">Alle postene bruker samme innlogging og ser det samme. '
+    + 'Navnet er bare til loggen, så dere vet hvem som registrerte hva.</p>'
+    + '<label class="felt">Navn eller post<input id="innNavn" placeholder="For eksempel Kari på mål" autocomplete="off"></label>'
     + '<label class="felt">Kode<input id="innKode" type="password" autocomplete="off"></label>'
-    + '<div class="velger" style="margin-bottom:12px">'
-    + '<button data-rolle="start">Startpost</button>'
-    + '<button data-rolle="mal" class="valgt">Målpost</button>'
-    + '<button data-rolle="arrangor">Arrangør</button></div>'
-    + '<button class="knapp primar" data-handling="loggInn" style="width:100%">Logg inn</button></div>';
+    + '<button class="knapp primar" data-handling="loggInn" style="width:100%">Logg inn</button></div>'
+    + '<p class="svak" style="text-align:center;font-size:13px;margin-top:10px">'
+    + 'Resultatlista er åpen for alle, uten innlogging.</p>';
 }
 
 /* -------------------------------------------------------------- rutenettet */
@@ -674,6 +669,12 @@ function oppdaterRutenettPaaPlass(l){
     var merke = node.querySelector('.rmerke');
     if (merke && merke.textContent !== s.merke) merke.textContent = s.merke;
 
+    // tiden endrer seg bare når en passering registreres, så den hører hjemme
+    // her sammen med de andre feltene, ikke i tikk()
+    var tid = node.querySelector('.rtid');
+    var nyTid = F.ruteTid(l, deltakere[i]);
+    if (tid && tid.textContent !== nyTid) tid.textContent = nyTid;
+
     var fv = s.forventet == null ? null : String(s.forventet);
     if (node.getAttribute('data-forv') !== fv){
       if (fv == null) node.removeAttribute('data-forv');
@@ -694,7 +695,10 @@ function oppdaterRutenettPaaPlass(l){
 function rutenettStruktur(l){
   return l.deltakere.length + '|' + F.utildelte(l).length + '|' + (valgtBanket || '')
     + '|' + rutenettKolonner(l.deltakere.length, F.utildelte(l).length > 0)
-    + '|' + l.antallRunder + '|' + advarsler();
+    + '|' + l.antallRunder + '|' + advarsler()
+    // fullført endrer toppen av skjermen, så da må innholdet bygges på nytt
+    + '|' + (l.fullfort || '') + '|' + (F.aktive(l).filter(function(d){
+        var t = F.tilstandFor(l, d); return t.ferdig; }).length === F.aktive(l).length);
 }
 
 function htmlRutenett(l){
@@ -718,6 +722,21 @@ function htmlRutenett(l){
   });
 
   var h = '';
+
+  // Er løpet fullført, skal det stå der og ikke bare merkes på et trykk som
+  // ikke virker. Er alle i mål, tilbys knappen der øyet allerede er.
+  if (l.fullfort){
+    h += '<div class="kort" style="border-color:var(--gronn);padding:12px">'
+      + '<b>Løpet er fullført</b> <span class="svak">' + F.klokkeslett(l.fullfort) + '</span>'
+      + '<p class="svak" style="font-size:13px;margin:4px 0 8px">Rutenettet er låst, så tidene kan ikke endres ved et uhell.</p>'
+      + '<button class="knapp mini" data-handling="apneIgjen">Åpne igjen</button></div>';
+  }else if (ferdige && !ute && !ikkeStartet && !banket.length){
+    h += '<div class="kort" style="border-color:var(--gronn);padding:12px">'
+      + '<b>Alle ' + ferdige + ' er i mål.</b>'
+      + '<p class="svak" style="font-size:13px;margin:4px 0 8px">Lås resultatet så det ikke kan endres ved et uhell.</p>'
+      + '<button class="knapp primar" data-handling="fullfor">Erklær løpet fullført</button></div>';
+  }
+
   h += '<div class="stripe" id="stripe">' + stripeInnhold(ikkeStartet, ute, ferdige, banket.length) + '</div>';
 
   if (banket.length){
@@ -749,6 +768,7 @@ function htmlRutenett(l){
           + ' aria-label="' + esc(d.nr + ' ' + (d.navn||'')) + '">'
           + '<span class="rtall">' + d.nr + '</span>'
           + '<span class="rnavn">' + esc(fornavn(d.navn)) + '</span>'
+          + '<span class="rtid">' + F.ruteTid(l, d) + '</span>'
           + '<span class="rmerke">' + s.merke + '</span>'
           + '<span class="rring"></span>'
           + '</button>';
@@ -849,6 +869,14 @@ function grupperFor(l){
 function htmlResultat(l){
   var antall = Number(l.antallRunder);
   var h = '';
+
+  // Publikum skal kunne se forskjell på en liste som fortsatt endrer seg og
+  // en som er endelig. Uten dette må man gjette.
+  h += l.fullfort
+    ? '<div class="kort" style="border-color:var(--gronn);padding:10px 12px;text-align:center">'
+      + '<b>Endelig resultat</b> <span class="svak">· løpet ble fullført ' + F.klokkeslett(l.fullfort) + '</span></div>'
+    : '<div class="kort" style="padding:10px 12px;text-align:center">'
+      + '<b>Foreløpig stilling</b> <span class="svak">· løpet pågår</span></div>';
 
   h += '<div class="kort ikkePrint"><div class="rad mellom">'
     + '<div class="velger">'
@@ -1046,8 +1074,20 @@ function htmlData(l){
 
   h += '<div class="kort"><h2>Status</h2><p class="svak" style="font-size:14px">'
     + l.deltakere.length + ' ryttere, ' + l.passeringer.length + ' passeringer, '
-    + F.utildelte(l).length + ' uten startnummer.</p>'
-    + '<button class="knapp fare" data-handling="nullstill">Nullstill løpet</button></div>';
+    + F.utildelte(l).length + ' uten startnummer.'
+    + (l.fullfort ? ' Løpet ble erklært fullført ' + F.klokkeslett(l.fullfort) + '.' : '')
+    + '</p>'
+    + '<div class="rad" style="flex-wrap:wrap;gap:8px;margin-bottom:14px">'
+    + (l.fullfort
+        ? '<button class="knapp" data-handling="apneIgjen">Åpne løpet igjen</button>'
+        : '<button class="knapp primar" data-handling="fullfor">Erklær løpet fullført</button>')
+    + '</div>'
+    // To knapper, ikke én med to bekreftelser: du skal se hva som skjer før du
+    // trykker, ikke måtte vite at «Avbryt» betyr «slett alt».
+    + '<div class="rad" style="flex-wrap:wrap;gap:8px">'
+    + '<button class="knapp" data-handling="nullstillTider">Nullstill tidene, behold startlista</button>'
+    + '<button class="knapp fare" data-handling="nullstillAlt">Slett alt, også startlista</button>'
+    + '</div></div>';
 
   var logg = (l.logg||[]).slice(-40).reverse();
   h += '<div class="kort"><h2>Logg</h2>' + (logg.length
@@ -1066,10 +1106,15 @@ function fornavn(navn){
 
 /* Hvor mange kolonner rutenettet skal ha, slik at hele feltet får plass uten
    å scrolle. Vi regner ut fra RADER, ikke fra kvadratiske celler: rutehøyden
-   er fast (tall + fornavn), så det er antall rader som avgjør om det går inn.
-   Gulvet på 58 px hindrer at ruta blir for liten for en finger, og på telefon
-   godtar vi heller scrolling enn ruter ingen treffer. */
-var RUTE_HOYDE = 73;   // rutehøyde inkludert luft mellom radene
+   er fast (tall + fornavn + tid), så det er antall rader som avgjør om det går
+   inn. Gulvet på 58 px hindrer at ruta blir for liten for en finger, og på
+   telefon godtar vi heller scrolling enn ruter ingen treffer.
+
+   NB: endrer du innholdet i ruta, må dette tallet følge etter. Ellers regner
+   den med flere rader enn det er plass til, og feltet får scrolling på
+   løpsdagen. Målt: 4 kant + 8 topp + 29 tall + 14 navn + 14 tid + 12 bunn
+   + 6 luft. */
+var RUTE_HOYDE = 87;   // rutehøyde inkludert luft mellom radene
 function rutenettKolonner(antall, harBanket){
   if (antall < 2) return 1;
   var bredde = Math.min(window.innerWidth, 1100) - 50;
@@ -1089,6 +1134,12 @@ function kort(tittel, innhold){
    ========================================================================= */
 function trykkRute(nr){
   var l = lop();
+  // Er løpet erklært fullført, er resultatet lest opp. Da skal ikke en lomme
+  // eller en nysgjerrig finger kunne flytte på det.
+  if (l.fullfort){
+    varsle('Løpet er fullført. Åpne det igjen under Data for å endre.');
+    return;
+  }
   var d = F.finnDeltaker(l, nr);
   if (!d) return;
   var t = F.tilstandFor(l, d);
@@ -1257,13 +1308,6 @@ document.addEventListener('click', function(ev){
   if (ev.target.id === 'panel'){ lukkPanel(); return; }
   if ((n = ev.target.closest('[data-fane]'))){ byttFane(n.getAttribute('data-fane')); return; }
   if ((n = ev.target.closest('[data-gruppering]'))){ gruppering = n.getAttribute('data-gruppering'); tegn(); return; }
-  if ((n = ev.target.closest('[data-rolle]'))){
-    valgtRolle = n.getAttribute('data-rolle');
-    Array.prototype.forEach.call(document.querySelectorAll('[data-rolle]'), function(b){
-      b.classList.toggle('valgt', b === n);
-    });
-    return;
-  }
   if ((n = ev.target.closest('[data-modus]'))){
     send({ type:'oppsett', felt:'tidtakingModus', verdi:n.getAttribute('data-modus'), tid:na() });
     return;
@@ -1378,20 +1422,20 @@ function handling(navn, node){
   }
 
   if (navn === 'loggInn'){
-    var brukernavn = (el('innNavn').value || '').trim() || rolleNavn(valgtRolle);
+    var brukernavn = (el('innNavn').value || '').trim() || 'Arrangør';
     fetch('api/logg-inn', {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ kode: el('innKode').value, navn: brukernavn, rolle: valgtRolle })
+      body: JSON.stringify({ kode: el('innKode').value, navn: brukernavn })
     }).then(function(r){ return r.json().then(function(d){ return { ok:r.ok, d:d }; }); })
       .then(function(s){
         if (!s.ok){ varsle(s.d.feil || 'Innlogging feilet'); return; }
         token = s.d.token; minOkt = s.d.okt;
-        settProfil(minOkt.rolle);
+        settProfil('arrangor');
         try{ localStorage.setItem(nokkelOkt(), JSON.stringify({ token: token, okt: minOkt })); }catch(e){}
         lagreLokalt();
-        aktivFane = minOkt.rolle === 'start' ? 'start' : 'rutenett';
+        aktivFane = 'rutenett';
         sisteHtml = null;
-        varsle('Logget inn som ' + rolleNavn(minOkt.rolle));
+        varsle('Logget inn som ' + minOkt.navn);
         tegn(); tomKoe();
       }).catch(function(){ varsle('Fikk ikke kontakt med serveren.'); });
     return;
@@ -1444,11 +1488,39 @@ function handling(navn, node){
   if (navn === 'testLop') return simulerLop(l);
   if (navn === 'stresstest') return stresstest(l);
 
-  if (navn === 'nullstill'){
-    if (!confirm('Nullstille løpet for alle poster?')) return;
-    var beholde = l.deltakere.length ? confirm('Beholde startlista? OK = behold, Avbryt = slett alt.') : false;
-    send({ type:'nullstill', beholdDeltakere: beholde, navn: l.navn, tid:na() });
+  if (navn === 'nullstillTider'){
+    if (!confirm('Slette alle tider og starter for alle poster?\n\n'
+      + l.deltakere.length + ' ryttere blir stående i startlista.')) return;
+    send({ type:'nullstill', beholdDeltakere: true, navn: l.navn, tid:na() });
     angreStabel = [];
+    varsle('Tidene er nullstilt. Startlista står.');
+    return;
+  }
+
+  if (navn === 'nullstillAlt'){
+    if (!confirm('Slette ALT, også de ' + l.deltakere.length + ' rytterne i startlista?\n\n'
+      + 'Dette kan ikke angres.')) return;
+    send({ type:'nullstill', beholdDeltakere: false, navn: l.navn, tid:na() });
+    angreStabel = [];
+    varsle('Løpet er tomt.');
+    return;
+  }
+
+  if (navn === 'fullfor'){
+    var ute = l.deltakere.filter(function(d){
+      var t = F.tilstandFor(l, d);
+      return d.status === 'OK' && t.startet && !t.ferdig;
+    }).length;
+    if (ute && !confirm(ute + (ute === 1 ? ' rytter er' : ' ryttere er') + ' fortsatt ute på løypa.\n\n'
+      + 'Erklære løpet fullført likevel?')) return;
+    send({ type:'fullfor', tid:na() });
+    varsle('Løpet er fullført. Rutenettet er låst.');
+    return;
+  }
+
+  if (navn === 'apneIgjen'){
+    send({ type:'apne', tid:na() });
+    varsle('Løpet er åpnet igjen.');
     return;
   }
 }
