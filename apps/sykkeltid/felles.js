@@ -33,7 +33,7 @@
       intervallSek: 30,
       antallRunder: 2,
       antattRundeMin: 5,
-      aldersgrupper: '6-9, 10-12, 13-15, 16-99',
+      loyper: 'Kort, Lang',
       // 'startsted' = klokka gaar naar startposten sender rytteren ut
       // 'malstrek'  = klokka gaar fra foerste passering av tidtakerstreken
       tidtakingModus: 'startsted',
@@ -41,7 +41,7 @@
       // slik at et feiltrykk etter siste maalgang ikke kan endre et resultat
       // som allerede er lest opp.
       fullfort: null,
-      deltakere: [],    // {nr, navn, alder, klasse, startPos, faktiskStart, status}
+      deltakere: [],    // {nr, navn, loype, alder, klasse, startPos, faktiskStart, status}
       passeringer: [],  // {id, tid, nr, kilde, av}
       slettede: [],     // id-er som er slettet, hindrer at retry gjenoppliver dem
       logg: []          // {tid, tekst, av}
@@ -76,6 +76,10 @@
     return {
       nr: Number(x.nr),
       navn: x.navn || '',
+      loype: x.loype || '',
+      // alder brukes ikke lenger til gruppering, men staar igjen fordi innlimte
+      // startlister ofte har den med. Kastet vi den, ville kolonnen forsvinne
+      // uten forvarsel for den som limer inn fra et regneark.
       alder: (x.alder === '' || x.alder == null) ? null : Number(x.alder),
       klasse: x.klasse || '',
       startPos: x.startPos || pos,
@@ -183,13 +187,25 @@
       case 'nullstill':
         var beholdt = h.beholdDeltakere ? lop.deltakere.map(function (x) {
           return {
-            nr: x.nr, navn: x.navn, alder: x.alder, klasse: x.klasse,
+            nr: x.nr, navn: x.navn, loype: x.loype || '', alder: x.alder, klasse: x.klasse,
             startPos: x.startPos, faktiskStart: null, status: 'OK'
           };
         }) : [];
+        /* Oppsettet er ikke tider, og skal overleve en nullstilling av tidene.
+           Loypene er det viktigste: rytterens loype er en NAVNEREFERANSE inn i
+           lop.loyper, saa nullstiller vi navnelista mens vi beholder rytterne,
+           peker hver eneste rytter paa et navn som ikke finnes lenger, og
+           grupperingen ryker stille. Med aldersgrupper var dette ufarlig, for
+           gruppa ble utledet av rytterens egen alder. */
+        var oppsett = {
+          navn: lop.navn, dato: lop.dato, loyper: lop.loyper,
+          intervallSek: lop.intervallSek, antallRunder: lop.antallRunder,
+          antattRundeMin: lop.antattRundeMin, tidtakingModus: lop.tidtakingModus
+        };
         var mal = nyttLop();
         Object.keys(mal).forEach(function (k) { if (k !== 'versjon') lop[k] = mal[k]; });
-        lop.navn = h.navn || lop.navn;
+        Object.keys(oppsett).forEach(function (k) { lop[k] = oppsett[k]; });
+        lop.navn = h.navn || oppsett.navn;
         lop.deltakere = beholdt;
         break;
 
@@ -333,30 +349,35 @@
     return t.sisteTid + ref;
   }
 
-  /* -------------------------------------------------------- aldersgrupper */
+  /* --------------------------------------------------------------- loyper */
 
-  /* Tolker "6-9, 10-12, 16+" til grupper. Tomt felt gir ingen grupper. */
-  function alderGrupper(lop) {
-    var raa = String(lop.aldersgrupper || '').split(',');
+  /* Loypenavnene slik de er skrevet i oppsettet, f.eks. "Kort, Lang".
+     Et loep lagret foer loypene fantes har ingen verdi i det hele tatt, og faar
+     standardoppsettet. Tomt felt er derimot et valg: da finnes ingen loyper. */
+  function loypeNavn(lop) {
+    var raa = (lop && lop.loyper != null) ? String(lop.loyper) : 'Kort, Lang';
     var ut = [];
-    raa.forEach(function (bit) {
+    raa.split(',').forEach(function (bit) {
       var s = bit.trim();
       if (!s) return;
-      var m = s.match(/^(\d{1,3})\s*-\s*(\d{1,3})$/);
-      if (m) { ut.push({ navn: m[1] + '-' + m[2] + ' år', fra: Number(m[1]), til: Number(m[2]) }); return; }
-      m = s.match(/^(\d{1,3})\s*\+$/);
-      if (m) { ut.push({ navn: m[1] + ' år og eldre', fra: Number(m[1]), til: 999 }); return; }
-      m = s.match(/^(\d{1,3})$/);
-      if (m) { ut.push({ navn: m[1] + ' år', fra: Number(m[1]), til: Number(m[1]) }); }
+      // to like navn ville gitt to identiske grupper i resultatlista
+      for (var i = 0; i < ut.length; i++) if (ut[i].toLowerCase() === s.toLowerCase()) return;
+      ut.push(s);
     });
     return ut;
   }
 
-  function aldersgruppeFor(lop, d) {
-    if (d.alder == null || isNaN(d.alder)) return '';
-    var grupper = alderGrupper(lop);
-    for (var i = 0; i < grupper.length; i++) {
-      if (d.alder >= grupper[i].fra && d.alder <= grupper[i].til) return grupper[i].navn;
+  /* Loypa til en rytter, skrevet slik den staar i oppsettet. Vi sammenligner
+     uten hensyn til store bokstaver og mellomrom, slik at "kort" fra en limt
+     inn liste havner i samme gruppe som "Kort". Ukjent loype gir tom streng,
+     og rytteren havner i "uten loype" i stedet for i en egen gruppe med ett
+     medlem. */
+  function loypeFor(lop, d) {
+    var valgt = String((d && d.loype) || '').trim().toLowerCase();
+    if (!valgt) return '';
+    var navn = loypeNavn(lop);
+    for (var i = 0; i < navn.length; i++) {
+      if (navn[i].toLowerCase() === valgt) return navn[i];
     }
     return '';
   }
@@ -472,8 +493,8 @@
     tilstandFor: tilstandFor,
     medianRunde: medianRunde,
     forventetNeste: forventetNeste,
-    alderGrupper: alderGrupper,
-    aldersgruppeFor: aldersgruppeFor,
+    loypeNavn: loypeNavn,
+    loypeFor: loypeFor,
     beregnResultater: beregnResultater,
     klokkeslett: klokkeslett,
     varighet: varighet,

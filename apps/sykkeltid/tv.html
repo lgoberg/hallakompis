@@ -2,13 +2,20 @@
 <html lang="no">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Godlia Rundt - storskjerm</title>
+<!-- viewport-fit=cover kreves for at env(safe-area-inset-*) i det hele tatt
+     faar verdier paa iPhone. Uten den ligger sida innenfor hakket, men da med
+     svarte kanter i landskap. -->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0c1016">
+<title>Godlia Rundt - live</title>
 <link rel="icon" href="ikon.svg">
 <style>
 /* Bevisst gammeldags CSS. Denne siden skal kunne kjoere i nettleseren paa en
    TV, og der er stoetten for nyere ting upaalitelig. Ingen color-mix, ingen
-   nye selektorer, ingen aspect-ratio, ingen grid-gap-snarveier. */
+   nye selektorer, ingen aspect-ratio, ingen grid-gap-snarveier.
+   env() er unntaket, og den skrives alltid som en EKSTRA linje etter en vanlig
+   padding: en nettleser som ikke kjenner env() forkaster bare den linja og
+   beholder verdien over, i stedet for aa staa igjen med null luft. */
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;overflow:hidden}
 body{
@@ -18,6 +25,9 @@ body{
 }
 header{
   display:flex; align-items:center; gap:1.4vw; padding:1.2vh 2vw;
+  padding-top:calc(1.2vh + env(safe-area-inset-top,0px));
+  padding-left:calc(2vw + env(safe-area-inset-left,0px));
+  padding-right:calc(2vw + env(safe-area-inset-right,0px));
   border-bottom:1px solid #232b36; flex:0 0 auto;
 }
 /* logoen har hvit bakgrunn, saa den faar en lys plate aa staa paa i moerk visning */
@@ -26,7 +36,11 @@ header .tittel{font-size:3.2vh; font-weight:800; letter-spacing:.01em}
 header .tellere{margin-left:auto; display:flex; gap:2.4vw; font-size:2vh; color:#93a1b2}
 header .tellere b{color:#eef2f7; font-size:2.8vh; font-weight:800}
 
-main{flex:1 1 auto; display:flex; padding:1.6vh 2vw; overflow:hidden}
+main{
+  flex:1 1 auto; display:flex; padding:1.6vh 2vw; overflow:hidden;
+  padding-left:calc(2vw + env(safe-area-inset-left,0px));
+  padding-right:calc(2vw + env(safe-area-inset-right,0px));
+}
 .venstre{flex:1 1 auto; min-width:0; display:flex; flex-direction:column}
 .hoyre{
   flex:0 0 27%; min-width:0; display:flex; flex-direction:column;
@@ -84,6 +98,9 @@ h2 b{color:#eef2f7; font-weight:800}
 
 footer{
   flex:0 0 auto; padding:1.2vh 2vw; border-top:1px solid #232b36;
+  padding-bottom:calc(1.2vh + env(safe-area-inset-bottom,0px));
+  padding-left:calc(2vw + env(safe-area-inset-left,0px));
+  padding-right:calc(2vw + env(safe-area-inset-right,0px));
   display:flex; align-items:center; font-size:1.9vh; color:#93a1b2;
 }
 footer span{margin-right:2vw}
@@ -94,6 +111,84 @@ footer span{margin-right:2vw}
 .p-gronn{background:#12784a}
 footer .status{margin-left:auto; margin-right:0}
 .frakoblet{color:#f0684f}
+
+/* ------------------------------------------------------------------ telefon
+   Arrangoeren har trolig ingen TV paa loepsdagen, saa publikum skanner en QR
+   og faar den SAMME visningen staaende i haanda. Da stables rutenett og
+   resultat, og sida faar lov til aa rulle: en telefon i portrett har hoyde
+   nok bare hvis vi slutter aa presse alt inn i ett skjermbilde.
+   Skriftene gaar samtidig fra vh til px. vh paa en telefon maales mot et
+   vindu som vokser og krymper naar adresselinja skjules, og tekst som
+   endrer stoerrelse mens man ruller er verre enn tekst som er litt liten. */
+/* Ogsaa lav hoeyde: en telefon i landskap er 812-932 px bred og ville falt
+   til storskjerm-oppsettet, der alt er maalt i vh og 1vh da er under 4 px. */
+@media (max-width:767px), (max-height:520px){
+  html,body{height:auto; min-height:100%; overflow:visible}
+  body{-webkit-text-size-adjust:100%}
+
+  /* Knappen finnes bare her. Paa storskjerm veksler visningen selv. */
+  .nesteKnapp{
+    float:right; font:inherit; font-size:13px; font-weight:700;
+    background:#1f2a3a; color:#eef2f7; border:1px solid #3a4a60;
+    border-radius:999px; padding:6px 14px; min-height:34px;
+  }
+
+  header{
+    flex-wrap:wrap; gap:8px; padding:8px 12px;
+    padding-top:calc(8px + env(safe-area-inset-top,0px));
+    padding-left:calc(12px + env(safe-area-inset-left,0px));
+    padding-right:calc(12px + env(safe-area-inset-right,0px));
+  }
+  header .logo{height:30px; border-radius:5px; padding:3px 4px}
+  /* flex-basis 0, ikke auto: et langt loepsnavn skal kortes av med prikker paa
+     linja ved siden av logoen, ikke dytte seg selv ned paa en egen linje */
+  header .tittel{
+    font-size:19px; flex:1 1 0; min-width:0;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  /* tellerne faar en egen linje under tittelen og fordeles utover bredden */
+  header .tellere{width:100%; margin-left:0; gap:0; justify-content:space-between; font-size:12px}
+  header .tellere b{font-size:16px}
+
+  main{
+    flex-direction:column; overflow:visible; padding:10px 12px 0;
+    padding-left:calc(12px + env(safe-area-inset-left,0px));
+    padding-right:calc(12px + env(safe-area-inset-right,0px));
+  }
+  .venstre,.hoyre,.bareEn .venstre,.bareResultat .hoyre{flex:0 0 auto}
+  .hoyre{
+    border-left:none; margin-left:0; padding-left:0;
+    border-top:1px solid #232b36; margin-top:14px; padding-top:14px;
+  }
+  .bareResultat .hoyre{border-top:none; margin-top:0; padding-top:0}
+
+  h2{font-size:13px; margin-bottom:8px}
+  #rutenett{flex:0 0 auto}
+  /* ruta er saa liten paa telefon at et tresifret startnummer naar helt opp i
+     hjoernet der merket staar; luft paa toppen skyver tallet fri av det */
+  .rute{border-radius:6px; padding-top:6px}
+  .rute .merke{top:2px; right:3px; font-size:9px}
+  .rute .rnavn{margin-top:1px}
+
+  .liste{overflow:visible}
+  .rres{font-size:15px; padding:7px 0}
+  .rres .pl{width:22px}
+  .rres .nr{width:30px}
+  .rres .nv{padding-left:8px}
+  .rres .av{padding-left:6px}
+  .rres.gull{border-radius:5px; padding-left:4px; padding-right:4px}
+  .tom{font-size:15px; padding-top:12px}
+  .sistIMaal{font-size:13px; margin-top:10px; padding-top:10px}
+
+  footer{
+    flex-wrap:wrap; gap:4px 14px; margin-top:14px; font-size:12px; padding:8px 12px;
+    padding-bottom:calc(8px + env(safe-area-inset-bottom,0px));
+    padding-left:calc(12px + env(safe-area-inset-left,0px));
+    padding-right:calc(12px + env(safe-area-inset-right,0px));
+  }
+  footer span{margin-right:0}
+  .prikk{width:10px; height:10px; margin-right:5px}
+}
 </style>
 </head>
 <body>
@@ -137,6 +232,12 @@ var feilTeller = 0;
 var grupper = [];      // hvilke lister resultatkolonnen veksler mellom
 var gruppeNr = 0;
 var sistFerdige = [];  // startnumre som var i mål ved forrige henting
+var rotasjon = null;
+
+// sist skrevne HTML, slik at det ene sekundstikket som bare flytter klokka
+// ikke bygger om hele rutenettet under fingeren til en som ruller paa mobil
+var sisteRutenett = '';
+var sisteResultat = '';
 
 var laast = null;
 try{
@@ -146,6 +247,12 @@ try{
 
 if (laast === 'rutenett') document.getElementById('scene').className = 'bareEn';
 else if (laast === 'resultat') document.getElementById('scene').className = 'bareResultat';
+
+/* Samme grense som i CSS-en, og helst lest fra samme kilde: sprikte de to,
+   ville JS-en regnet ut ruter for en annen layout enn den som vises. */
+var smal = null;
+try{ smal = window.matchMedia ? window.matchMedia('(max-width: 767px), (max-height: 520px)') : null; }catch(e){}
+function erMobil(){ return smal ? smal.matches : ((window.innerWidth || 1280) < 768 || (window.innerHeight || 800) <= 520); }
 
 function esc(s){
   return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -162,28 +269,30 @@ function hent(){
       var d = JSON.parse(xhr.responseText);
       if (d && d.lop){
         lop = d.lop; feilTeller = 0;
-        document.getElementById('status').innerHTML = '';
+        visStatus();
         byggGrupper(); tegn();
       }
     }catch(e){}
   };
-  xhr.onerror = function(){
-    feilTeller++;
-    document.getElementById('status').innerHTML = feilTeller > 2
-      ? '<span class="frakoblet">Mistet kontakten med serveren</span>' : '';
-  };
+  xhr.onerror = function(){ feilTeller++; visStatus(); };
   xhr.send();
 }
 
-/* Resultatkolonnen veksler mellom sammenlagt og de aldersgruppene som faktisk
-   har noen i mål. Rutenettet staar stille hele tiden. */
+/* Statuslinja har to jobber, og forbindelsen vinner: er kontakten borte, vet
+   vi ikke om loepet er avsluttet siden sist vi hoerte noe. */
+function visStatus(){
+  var el = document.getElementById('status');
+  if (feilTeller > 2){ el.innerHTML = '<span class="frakoblet">Mistet kontakten med serveren</span>'; return; }
+  el.textContent = (lop && lop.fullfort) ? 'Løpet er avsluttet' : '';
+}
+
+/* Resultatkolonnen veksler mellom sammenlagt og de løypene som faktisk har
+   noen i mål. Rutenettet staar stille hele tiden. */
 function byggGrupper(){
   var nye = [{ navn: null, pred: null }];
-  F.alderGrupper(lop).forEach(function(g){
-    var r = F.beregnResultater(lop, function(d){ return F.aldersgruppeFor(lop, d) === g.navn; });
-    if (r.ferdige.length) nye.push({ navn: g.navn, pred: (function(navn){
-      return function(d){ return F.aldersgruppeFor(lop, d) === navn; };
-    })(g.navn) });
+  F.loypeNavn(lop).forEach(function(navn){
+    var pred = function(d){ return F.loypeFor(lop, d) === navn; };
+    if (F.beregnResultater(lop, pred).ferdige.length) nye.push({ navn: navn, pred: pred });
   });
   if (gruppeNr >= nye.length) gruppeNr = 0;
   grupper = nye;
@@ -218,18 +327,52 @@ function tegn(){
 
 function tegnRutenett(){
   var boks = document.getElementById('rutenett');
-  if (!lop.deltakere.length){ boks.innerHTML = '<div class="tom">Ingen deltakere lagt inn ennå</div>'; return; }
+  if (!lop.deltakere.length){
+    boks.innerHTML = '<div class="tom">Ingen deltakere lagt inn ennå</div>';
+    sisteRutenett = '';
+    return;
+  }
 
   var antall = lop.deltakere.length;
-  // kolonnetall ut fra den flata rutenettet faktisk har, ikke ut fra hele
-  // skjermen: kolonnen til høyre spiser en firedel av bredden
-  var bredde = boks.clientWidth || (window.innerWidth * 0.7);
-  var hoyde = boks.clientHeight || (window.innerHeight * 0.75);
-  var kol = Math.max(4, Math.round(Math.sqrt(antall * bredde / Math.max(hoyde, 200))));
-  var rader = Math.ceil(antall / kol);
-  var cellehoyde = Math.floor((hoyde / rader) * 100 / window.innerHeight);   // i vh
-  var skrift = Math.max(1.5, Math.min(cellehoyde * 0.48, 6));
-  var navnSkrift = skrift * 0.34;
+  // faller tilbake til et anslag hvis rutenettet ennaa ikke er maalt opp:
+  // paa TV spiser resultatkolonnen en firedel, paa telefon staar det alene
+  var bredde = boks.clientWidth || (window.innerWidth * (erMobil() ? 0.92 : 0.7));
+  var kol, gapCss, radCss, skriftCss, navnCss, visNavn;
+
+  if (erMobil()){
+    /* Paa telefon er hoyden fri fordi sida ruller. Da settes kolonnetallet av
+       hvor smal en rute kan bli og fortsatt leses i sol med strak arm, ikke av
+       hvor mye plass som er igjen. Alle rytterne staar der uansett, og ingen
+       skal maatte zoome for aa finne sitt eget nummer. */
+    var gap = 6;
+    var minRute = 62;                     // under dette blir startnummeret smaatt
+    kol = Math.floor((bredde + gap) / (minRute + gap));
+    if (kol < 3) kol = 3;
+    if (kol > antall) kol = antall;
+    var ruteBredde = (bredde - gap * (kol - 1)) / kol;
+    /* Litt lavere enn bred, for hoyden er det eneste som koster rulling. Men
+       ikke lavere enn at fornavnet faar bli med: paa en telefon er navnet
+       hovedgrunnen til at noen ser paa skjermen i det hele tatt. */
+    var ruteHoyde = Math.max(48, Math.min(Math.round(ruteBredde * 0.86), 84));
+    var mSkrift = Math.max(16, Math.min(Math.round(ruteHoyde * 0.42), 30));
+    visNavn = true;
+    gapCss = gap + 'px'; radCss = ruteHoyde + 'px';
+    skriftCss = mSkrift + 'px';
+    navnCss = Math.max(9, Math.round(mSkrift * 0.4)) + 'px';
+  } else {
+    // kolonnetall ut fra den flata rutenettet faktisk har, ikke ut fra hele
+    // skjermen: kolonnen til høyre spiser en firedel av bredden
+    var hoyde = boks.clientHeight || (window.innerHeight * 0.75);
+    kol = Math.max(4, Math.round(Math.sqrt(antall * bredde / Math.max(hoyde, 200))));
+    var rader = Math.ceil(antall / kol);
+    var cellehoyde = Math.floor((hoyde / rader) * 100 / window.innerHeight);   // i vh
+    var skrift = Math.max(1.5, Math.min(cellehoyde * 0.48, 6));
+    var navnSkrift = skrift * 0.34;
+    visNavn = navnSkrift >= 1.1;
+    gapCss = '0.7vh'; radCss = 'minmax(0,1fr)';
+    skriftCss = skrift.toFixed(1) + 'vh';
+    navnCss = navnSkrift.toFixed(1) + 'vh';
+  }
 
   var html = '';
   lop.deltakere.slice().sort(function(a,b){ return a.nr - b.nr; }).forEach(function(d){
@@ -238,16 +381,17 @@ function tegnRutenett(){
       : t.kode === 'dns' ? 'DNS' : t.kode === 'dnf' ? 'DNF'
       : (t.kode === 'oransje' || t.kode === 'lilla') ? 'R' + t.paaRunde : '';
     var fn = fornavn(d.navn);
-    html += '<div class="rute r-' + t.kode + '" style="font-size:' + skrift.toFixed(1) + 'vh">'
+    html += '<div class="rute r-' + t.kode + '" style="font-size:' + skriftCss + '">'
       + '<span>' + d.nr + '</span>'
-      + (fn && navnSkrift >= 1.1
-          ? '<span class="rnavn" style="font-size:' + navnSkrift.toFixed(1) + 'vh">' + esc(fn) + '</span>' : '')
+      + (fn && visNavn
+          ? '<span class="rnavn" style="font-size:' + navnCss + '">' + esc(fn) + '</span>' : '')
       + (merke ? '<span class="merke">' + merke + '</span>' : '') + '</div>';
   });
   boks.style.gridTemplateColumns = 'repeat(' + kol + ',1fr)';
-  boks.style.gridAutoRows = 'minmax(0,1fr)';
-  boks.style.gap = '0.7vh';
-  boks.innerHTML = html;
+  boks.style.gridAutoRows = radCss;
+  boks.style.gap = gapCss;
+  // skriftstørrelsene ligger i HTML-en, saa en layout-endring gir ny streng
+  if (html !== sisteRutenett){ boks.innerHTML = html; sisteRutenett = html; }
 }
 
 /* Ryttere som fortsatt er ute vises aldri med tider. Hele konkurransen hviler
@@ -256,26 +400,38 @@ function tegnRutenett(){
 function tegnResultat(ferske){
   var g = grupper[gruppeNr] || { navn: null, pred: null };
   var r = F.beregnResultater(lop, g.pred);
+  var endelig = !!(lop && lop.fullfort);
 
-  document.getElementById('resTittel').innerHTML = 'Foreløpig resultat · <b>'
-    + (g.navn ? esc(g.navn) : 'Sammenlagt') + '</b>'
-    + (grupper.length > 1 ? ' <span style="font-weight:400">(' + (gruppeNr+1) + '/' + grupper.length + ')</span>' : '');
+  // Paa telefon roterer vi ikke av oss selv, saa da maa det finnes noe aa
+  // trykke paa for aa se de andre loypene. Paa storskjerm veksler den selv,
+  // og en knapp ingen kan naa ville bare vaert stoy.
+  document.getElementById('resTittel').innerHTML = (endelig ? 'Endelig resultat' : 'Foreløpig resultat')
+    + ' · <b>' + (g.navn ? esc(g.navn) : 'Sammenlagt') + '</b>'
+    + (grupper.length > 1 ? ' <span style="font-weight:400">(' + (gruppeNr+1) + '/' + grupper.length + ')</span>' : '')
+    + (grupper.length > 1 && erMobil()
+        ? ' <button data-neste class="nesteKnapp">Neste &rsaquo;</button>' : '');
 
   var boks = document.getElementById('resListe');
   if (!r.ferdige.length){
-    boks.innerHTML = '<div class="tom">Ingen i mål ennå</div>';
+    boks.innerHTML = '<div class="tom">' + (endelig ? 'Ingen fullførte løpet' : 'Ingen i mål ennå') + '</div>';
+    sisteResultat = '';
     document.getElementById('sistIMaal').innerHTML = '';
     return;
   }
 
-  var plass = Math.max(5, Math.floor(boks.clientHeight / (window.innerHeight * 0.038)));
-  boks.innerHTML = r.ferdige.slice(0, plass).map(function(x){
+  // paa telefon ruller sida, saa hele lista kan staa; paa TV maa den kuttes
+  // der kolonnen slutter
+  var plass = erMobil()
+    ? r.ferdige.length
+    : Math.max(5, Math.floor(boks.clientHeight / (window.innerHeight * 0.038)));
+  var html = r.ferdige.slice(0, plass).map(function(x){
     return '<div class="rres' + (x.plass === 1 ? ' gull' : '') + (ferske[x.d.nr] ? ' fersk' : '') + '">'
       + '<span class="pl">' + x.plass + '</span>'
       + '<span class="nr">' + x.d.nr + '</span>'
       + '<span class="nv">' + esc(x.d.navn || '') + '</span>'
       + '<span class="av">' + F.sekTekst(x.avvik) + ' s</span></div>';
   }).join('');
+  if (html !== sisteResultat){ boks.innerHTML = html; sisteResultat = html; }
 
   // siste som kom i mål, i hele feltet
   var sist = null, sistTid = -1;
@@ -290,18 +446,47 @@ function tegnResultat(ferske){
 
 function nesteGruppe(){
   if (grupper.length > 1){ gruppeNr = (gruppeNr + 1) % grupper.length; tegn(); }
+  startRotasjon();   // et bytte man ber om selv skal gi full lesetid etterpaa
+}
+
+/* Rotasjonen er riktig paa en passiv storskjerm: ingen staar der og trykker,
+   saa den maa veksle selv. Paa en telefon er den fiendtlig. Sida ruller, og
+   naar innholdet bytter hvert 15. sekund hopper dokumenthoyden under den som
+   leser. Der venter vi heller paa at noen ber om neste gruppe. */
+function startRotasjon(){
+  if (rotasjon) clearInterval(rotasjon);
+  if (erMobil()) return;
+  rotasjon = setInterval(nesteGruppe, 15000);
 }
 
 setInterval(hent, 3000);
 setInterval(tegn, 1000);
-setInterval(nesteGruppe, 15000);
+startRotasjon();
 hent();
 
 document.addEventListener('keydown', function(ev){
   if (ev.key === 'ArrowRight' || ev.key === ' '){ ev.preventDefault(); nesteGruppe(); }
 });
-document.addEventListener('click', nesteGruppe);
-window.addEventListener('resize', function(){ tegn(); });
+/* Paa storskjerm er hele flata en «neste»-knapp, og det er greit: det finnes
+   ingenting annet aa trykke paa. Paa telefon ruller man med fingeren, og et
+   uhellstrykk midt i rullingen ville hoppet til en annen loype. Der maa man
+   treffe knappen. */
+document.addEventListener('click', function(ev){
+  if (erMobil() && !ev.target.closest('[data-neste]')) return;
+  nesteGruppe();
+});
+
+/* iOS skjuler og viser adresselinja under rulling, og hver slik endring er en
+   resize. Paa telefon avhenger rutenettet bare av bredden, saa en hoyde som
+   endrer seg skal ikke tegne om noe som helst. */
+var sisteBredde = window.innerWidth;
+var omtegning = null;
+window.addEventListener('resize', function(){
+  if (erMobil() && window.innerWidth === sisteBredde) return;
+  sisteBredde = window.innerWidth;
+  if (omtegning) clearTimeout(omtegning);
+  omtegning = setTimeout(tegn, 150);
+});
 
 })();
 </script>

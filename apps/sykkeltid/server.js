@@ -146,12 +146,50 @@ function lagreOkter() {
   } catch (e) {}
 }
 
+/* ------------------------------------------------------- sladding av tider
+
+   Hele konkurranseformatet hviler paa at ingen kjenner sin egen runde 1-tid
+   mens de sykler: vet du at foerste runde tok 5:12, sikter du deg inn paa
+   5:12 i stedet for aa sykle jevnt, og idealtid er ikke lenger idealtid.
+
+   Grensesnittet har alltid skjult tallet for utloggede, men /api/tilstand ga
+   det ut raatt til hvem som helst. Det var levelig saa lenge adressen bare
+   sirkulerte blant postene. Naa henger vi opp en QR som sender hvert eneste
+   publikum, og dermed hver eneste rytter, til nettopp den adressen.
+
+   Derfor: for den som ikke er logget inn, faar ryttere som ENNAA ER UTE alle
+   tidsstempler satt til samme verdi. Antallet passeringer og det at de har
+   startet er beholdt, saa fargene i rutenettet og tellerne stemmer. De som er
+   i maal beholder tidene sine, for da er resultatet uansett offentlig og
+   kunnskapen kan ikke lenger utnyttes.
+
+   medianRunde() filtrerer paa r > 10000, saa nullrundene her forurenser ikke
+   feltets median. */
+function offentligLop(l) {
+  const behov = Felles.passeringsBehov(l);
+  const ferdig = {};
+  l.deltakere.forEach(d => {
+    ferdig[d.nr] = l.passeringer.filter(p => p.nr === d.nr).length >= behov;
+  });
+  return Object.assign({}, l, {
+    deltakere: l.deltakere.map(d => ferdig[d.nr]
+      ? d
+      : Object.assign({}, d, { faktiskStart: d.faktiskStart == null ? null : 1 })),
+    // en tid uten nummer roeper ingenting om noen enkelt rytter, men den blir
+    // ogsaa vist i rutenettet, saa den beholdes
+    passeringer: l.passeringer.map(p => (p.nr != null && !ferdig[p.nr])
+      ? Object.assign({}, p, { tid: 1 })
+      : p)
+  });
+}
+
 /* ------------------------------------------------------------ kringkasting */
 
 function kringkast() {
-  const nyttData = 'data: ' + JSON.stringify({ type: 'tilstand', lop: lop }) + '\n\n';
+  const helt = 'data: ' + JSON.stringify({ type: 'tilstand', lop: lop }) + '\n\n';
+  const sladdet = 'data: ' + JSON.stringify({ type: 'tilstand', lop: offentligLop(lop) }) + '\n\n';
   for (const svar of stroemmer) {
-    try { svar.write(nyttData); } catch (e) { stroemmer.delete(svar); }
+    try { svar.write(svar.sladd ? sladdet : helt); } catch (e) { stroemmer.delete(svar); }
   }
 }
 
@@ -271,9 +309,10 @@ const tjener = http.createServer(async (req, res) => {
   }
 
   // Tilstanden er lesbar uten innlogging, slik at resultatskjerm og
-  // publikumslenke virker uten at noen maa dele koden.
+  // publikumslenke virker uten at noen maa dele koden. Men da maa den vaere
+  // sladdet, se offentligLop().
   if (sti === '/api/tilstand') {
-    return svarJson(res, 200, { lop, serverTid: Date.now() });
+    return svarJson(res, 200, { lop: okt(req) ? lop : offentligLop(lop), serverTid: Date.now() });
   }
 
   if (sti === '/api/strom') {
@@ -284,7 +323,11 @@ const tjener = http.createServer(async (req, res) => {
       'X-Accel-Buffering': 'no'
     });
     res.write('retry: 2000\n\n');
-    res.write('data: ' + JSON.stringify({ type: 'tilstand', lop: lop }) + '\n\n');
+    const innlogget = !!okt(req);
+    res.write('data: ' + JSON.stringify({
+      type: 'tilstand', lop: innlogget ? lop : offentligLop(lop)
+    }) + '\n\n');
+    res.sladd = !innlogget;   // kringkastingen leser denne, se sendTilAlle()
     stroemmer.add(res);
     const puls = setInterval(() => {
       try { res.write(': puls\n\n'); } catch (e) {}
@@ -325,6 +368,8 @@ const tjener = http.createServer(async (req, res) => {
   if (sti === '/' || sti === '/index.html') return serverStatisk(req, res, 'index.html');
   if (sti === '/resultat') return serverStatisk(req, res, 'index.html');
   if (sti === '/tv') return serverStatisk(req, res, 'tv.html');
+  // plakaten til aa henge opp ved maalstreken, med QR til /tv
+  if (sti === '/plakat') return serverStatisk(req, res, 'plakat.html');
   if (/^\/[\w.-]+$/.test(sti)) return serverStatisk(req, res, sti.slice(1));
 
   res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });

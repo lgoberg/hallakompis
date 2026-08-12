@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plakat - Godlia Rundt</title>
+<link rel="icon" href="ikon.svg">
+<style>
+/* Denne sida har ett formål: skrives ut på A4 og henges opp ved målstreken.
+   Derfor hvit bakgrunn og svart tekst hele veien, også på skjerm. En mørk
+   plakat ser flott ut i nettleseren og tømmer blekkpatronen. */
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:#fff; color:#111;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  display:flex; align-items:center; justify-content:center; min-height:100vh; padding:24px;
+}
+.ark{
+  width:100%; max-width:640px; text-align:center;
+  border:2px solid #111; border-radius:18px; padding:40px 32px;
+}
+.logo{max-width:180px; width:45%; height:auto; margin-bottom:18px}
+h1{font-size:38px; line-height:1.1; letter-spacing:-.02em; margin-bottom:6px}
+.hva{font-size:19px; color:#444; margin-bottom:26px}
+.qr{margin:0 auto 22px; width:min(360px, 74vw)}
+.qr svg{display:block; width:100%; height:auto}
+.oppfordring{font-size:26px; font-weight:800; margin-bottom:8px}
+/* Adressen skrevet ut i klartekst: en QR som ikke vil la seg skanne er en
+   blindvei hvis det ikke står noe å taste inn i stedet. */
+.adresse{
+  font-size:19px; font-weight:700; letter-spacing:.01em; word-break:break-all;
+  border-top:1px solid #ddd; padding-top:14px; margin-top:14px;
+}
+.liten{font-size:14px; color:#666; margin-top:10px}
+.verktoy{margin-top:22px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap}
+.verktoy button{
+  font:inherit; font-size:15px; font-weight:700; cursor:pointer;
+  background:#111; color:#fff; border:none; border-radius:10px; padding:11px 20px;
+}
+.verktoy button.lys{background:#fff; color:#111; border:1px solid #bbb}
+
+@media print{
+  /* Verktøyknappene skal ikke være med på arket, og ramma trenger ikke
+     ta plass når papiret allerede har kanter. */
+  body{padding:0; display:block}
+  .ark{max-width:none; border:none; padding:12mm}
+  .verktoy{display:none}
+  .qr{width:120mm}
+  h1{font-size:32pt}
+  .oppfordring{font-size:22pt}
+  .adresse{font-size:15pt}
+  @page{size:A4 portrait; margin:12mm}
+}
+</style>
+</head>
+<body>
+<div class="ark">
+  <img class="logo" src="logo.png" alt="Golia Vel">
+  <h1 id="lopsnavn">Godlia Rundt</h1>
+  <p class="hva">Tidtaking på idealtid. To runder, og den som sykler likest vinner.</p>
+
+  <div class="qr" id="qr"></div>
+
+  <div class="oppfordring">Skann for å følge løpet</div>
+  <p class="liten">Se stillingen live på din egen telefon, med en gang noen passerer målstreken.</p>
+
+  <div class="adresse" id="adresse"></div>
+  <p class="liten">Eller skriv adressen rett inn i nettleseren.</p>
+
+  <div class="verktoy">
+    <button onclick="window.print()">Skriv ut</button>
+    <button class="lys" onclick="location.href='/'">Tilbake til appen</button>
+  </div>
+</div>
+
+<script src="felles.js"></script>
+<script src="qr.js"></script>
+<script>
+/* Adressen utledes av hvor plakaten selv ligger. Da peker QR-en på riktig sted
+   uansett om appen kjøres lokalt, på code.run-adressen eller på
+   sykkeltid.hallakompis.no, uten at noen må huske å endre en konstant her. */
+var maal = location.origin + '/tv';
+document.getElementById('adresse').textContent = maal.replace(/^https?:\/\//, '');
+
+/* Feilkorreksjonsnivå M tåler at rundt 15 prosent av koden er skitten eller
+   bortrevet. Det er verdt en litt tettere kode på en plakat som skal henge ute
+   i vind og kanskje regn. */
+document.getElementById('qr').innerHTML = QR.svg(maal, { storrelse: 720, marg: 4 });
+
+/* Løpsnavnet hentes fra serveren, så plakaten stemmer med det arrangøren
+   faktisk har kalt løpet. Svarer den ikke, står standardnavnet igjen: en
+   plakat uten navn er verre enn en plakat med et litt gammelt navn. */
+fetch('api/tilstand').then(function(r){ return r.json(); }).then(function(d){
+  if (d && d.lop && d.lop.navn) document.getElementById('lopsnavn').textContent = d.lop.navn;
+}).catch(function(){});
+</script>
+</body>
+</html>

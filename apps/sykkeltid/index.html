@@ -209,7 +209,7 @@ th,td{padding:8px 6px; border-bottom:1px solid var(--kant); text-align:left; ver
 th{font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:var(--svak); font-weight:700}
 td.tall,th.tall{text-align:right; font-variant-numeric:tabular-nums}
 tr.vinner td{background:rgba(18,120,74,.12)}
-/* På smal skjerm faller alder og rundetider ut av tabellen og legger seg som
+/* På smal skjerm faller løype og rundetider ut av tabellen og legger seg som
    en linje under navnet. Ellers havner avviket utenfor skjermen, og det er
    nettopp tallet som avgjør resultatet. */
 .underlinje{display:none; font-size:12px; color:var(--svak); font-weight:400; font-variant-numeric:tabular-nums}
@@ -837,7 +837,7 @@ function htmlStartListe(l){
   if (!liste.length) return '<p class="tom">' + (sok ? 'Ingen treff.' : 'Alle er sendt ut.') + '</p>';
   return liste.map(function(d){
     var meta = [];
-    if (d.alder != null) meta.push(d.alder + ' år');
+    if (F.loypeFor(l, d)) meta.push(F.loypeFor(l, d));
     if (d.klasse) meta.push(d.klasse);
     return '<button class="startrad" data-startnr="' + d.nr + '">'
       + '<span class="snr">' + d.nr + '</span>'
@@ -849,11 +849,11 @@ function htmlStartListe(l){
 
 /* ---------------------------------------------------------------- resultat */
 function grupperFor(l){
-  if (gruppering === 'alder'){
-    var g = F.alderGrupper(l).map(function(x){
-      return { navn: x.navn, pred: function(d){ return F.aldersgruppeFor(l, d) === x.navn; } };
+  if (gruppering === 'loype'){
+    var g = F.loypeNavn(l).map(function(navn){
+      return { navn: navn, pred: function(d){ return F.loypeFor(l, d) === navn; } };
     });
-    g.push({ navn: 'Uten aldersgruppe', pred: function(d){ return F.aldersgruppeFor(l, d) === ''; } });
+    g.push({ navn: 'Uten løype', pred: function(d){ return F.loypeFor(l, d) === ''; } });
     return g;
   }
   if (gruppering === 'klasse'){
@@ -880,8 +880,8 @@ function htmlResultat(l){
 
   h += '<div class="kort ikkePrint"><div class="rad mellom">'
     + '<div class="velger">'
-    + ['sammenlagt','alder','klasse'].map(function(g){
-        var navn = g === 'sammenlagt' ? 'Sammenlagt' : g === 'alder' ? 'Aldersgrupper' : 'Klasser';
+    + ['sammenlagt','loype','klasse'].map(function(g){
+        var navn = g === 'sammenlagt' ? 'Sammenlagt' : g === 'loype' ? 'Løyper' : 'Klasser';
         return '<button data-gruppering="' + g + '" class="' + (gruppering===g?'valgt':'') + '">' + navn + '</button>';
       }).join('')
     + '</div>'
@@ -903,20 +903,20 @@ function htmlResultat(l){
       var kol = '';
       for (var i=0;i<antall;i++) kol += '<th class="tall kolBred">Runde ' + (i+1) + '</th>';
       h += '<div class="tabellRam"><table><thead><tr><th class="tall">#</th><th class="tall">Nr</th><th>Navn</th>'
-        + '<th class="tall kolBred">Alder</th>' + kol + '<th class="tall">Avvik</th></tr></thead><tbody>'
+        + '<th class="kolBred">Løype</th>' + kol + '<th class="tall">Avvik</th></tr></thead><tbody>'
         + r.ferdige.map(function(x){
-            var celler = '', under = [];
+            var celler = '', under = [], loype = F.loypeFor(l, x.d);
             for (var j=0;j<antall;j++){
               celler += '<td class="tall kolBred">' + F.varighet(x.runder[j]) + '</td>';
               under.push(F.varighet(x.runder[j]));
             }
-            if (x.d.alder != null) under.unshift(x.d.alder + ' år');
+            if (loype) under.unshift(loype);
             return '<tr class="' + (x.plass===1?'vinner':'') + '">'
               + '<td class="tall"><b>' + x.plass + '</b></td>'
               + '<td class="tall">' + x.d.nr + '</td>'
               + '<td>' + esc(x.d.navn||'')
                 + '<span class="underlinje">' + under.join(' · ') + '</span></td>'
-              + '<td class="tall kolBred">' + (x.d.alder != null ? x.d.alder : '') + '</td>'
+              + '<td class="kolBred">' + esc(loype) + '</td>'
               + celler + '<td class="tall"><b>' + F.sekTekst(x.avvik) + ' s</b></td></tr>';
           }).join('') + '</tbody></table></div>';
     }
@@ -955,31 +955,47 @@ function htmlDeltakere(l){
   if (!l.deltakere.length){
     h += '<p class="tom">Tom. Lim inn startlista, eller legg til rytterne én for én.</p>';
   }else{
+    var loyper = F.loypeNavn(l);
     h += '<div class="tabellRam"><table><thead><tr>'
-      + '<th class="tall">Nr</th><th>Navn</th><th class="tall">Alder</th><th>Klasse</th>'
-      + '<th>Aldersgruppe</th><th>Status</th><th></th></tr></thead><tbody>'
+      + '<th class="tall">Nr</th><th>Navn</th><th>Løype</th><th class="tall">Alder</th>'
+      + '<th>Klasse</th><th>Status</th><th></th></tr></thead><tbody>'
       + l.deltakere.slice().sort(function(a,b){ return a.nr-b.nr; }).map(function(d){
+          // Løypa velges fra lista, aldri som fritekst. Skrives den fritt,
+          // ender "kort" og "Kort " opp som to grupper i resultatlista.
+          var min = F.loypeFor(l, d);
+          var valg = '<option value=""' + (min ? '' : ' selected') + '>-</option>'
+            + loyper.map(function(nv){
+                return '<option value="' + esc(nv) + '"' + (min === nv ? ' selected' : '') + '>' + esc(nv) + '</option>';
+              }).join('');
           return '<tr>'
             + '<td><input class="nr tall" value="' + esc(d.nr) + '" data-endre="nr" data-nr="' + d.nr + '"></td>'
             + '<td><input value="' + esc(d.navn||'') + '" data-endre="navn" data-nr="' + d.nr + '"></td>'
+            + '<td><select data-endre="loype" data-nr="' + d.nr + '" style="min-width:84px">' + valg + '</select></td>'
             + '<td><input class="alder tall" type="number" min="1" max="99" value="' + (d.alder != null ? d.alder : '')
               + '" data-endre="alder" data-nr="' + d.nr + '"></td>'
             + '<td><input value="' + esc(d.klasse||'') + '" data-endre="klasse" data-nr="' + d.nr + '" style="min-width:80px"></td>'
-            + '<td class="svak" style="font-size:13px">' + esc(F.aldersgruppeFor(l, d) || '-') + '</td>'
             + '<td><select data-endre="status" data-nr="' + d.nr + '">'
               + ['OK','DNS','DNF'].map(function(s){ return '<option ' + (d.status===s?'selected':'') + '>' + s + '</option>'; }).join('')
               + '</select></td>'
             + '<td class="tall"><button class="knapp mini fare" data-handling="slettDeltaker" data-nr="' + d.nr + '">Slett</button></td></tr>';
         }).join('') + '</tbody></table></div>';
+    if (!loyper.length){
+      h += '<p class="svak" style="font-size:13px;margin:8px 0 0">Ingen løyper er satt opp ennå. '
+        + 'Legg dem inn under Oppsett, så kan hver rytter settes på en løype her.</p>';
+    }
   }
   h += '</div>';
 
+  var loypeEksempel = F.loypeNavn(l);
   h += '<div class="kort" id="limKort" style="display:none"><h2>Lim inn startliste</h2>'
     + '<p class="svak" style="font-size:13px">Én rytter per linje, skilt med semikolon, komma eller tabulator: '
-    + '<code>startnr;navn;alder;klasse</code>. Alder og klasse kan stå i hvilken som helst rekkefølge, '
-    + 'og kan sløyfes. Uten nummer får rytteren neste ledige.</p>'
+    + '<code>startnr;navn;løype;klasse</code>. Løype, klasse og eventuell alder kan stå i hvilken som helst '
+    + 'rekkefølge, og kan sløyfes. En tekstbit som er navnet på en løype'
+    + (loypeEksempel.length ? ' (' + esc(loypeEksempel.join(' eller ')) + ')' : '')
+    + ' leses som løype, uansett store eller små bokstaver. Uten nummer får rytteren neste ledige.</p>'
     + '<textarea id="limFelt" rows="8" style="width:100%;padding:10px;border:1px solid var(--kant);border-radius:8px;background:var(--bg)"'
-    + ' placeholder="1;Kari Nordmann;11;Jenter&#10;2;Ola Hansen;12;Gutter"></textarea>'
+    + ' placeholder="1;Kari Nordmann;' + esc(loypeEksempel[0] || 'Kort') + ';Jenter&#10;2;Ola Hansen;'
+    + esc(loypeEksempel[1] || loypeEksempel[0] || 'Lang') + ';Gutter"></textarea>'
     + '<div class="rad" style="margin-top:8px">'
     + '<button class="knapp primar" data-handling="importerLim">Legg inn</button>'
     + '<button class="knapp" data-handling="visLim">Lukk</button></div></div>';
@@ -998,13 +1014,16 @@ function htmlOppsett(l){
     + '<p class="svak" style="font-size:13px">Antatt rundetid brukes bare til å anslå når en rytter kommer '
     + 'tilbake første gang. Så snart tre runder er registrert, regner appen med den reelle mediantiden.</p></div>'
 
-    + '<div class="kort"><h2>Aldersgrupper</h2>'
-    + felt('Grupper', 'aldersgrupper', 'text', l.aldersgrupper)
-    + '<p class="svak" style="font-size:13px">Skriv gruppene med bindestrek og komma, for eksempel '
-    + '<code>6-9, 10-12, 13-15, 16+</code>. Resultatlista kan vises sammenlagt eller delt i disse gruppene. '
-    + 'Grupperingen påvirker ikke tidtakinga, bare hvordan resultatene sorteres.</p>'
-    + '<div class="rad">' + F.alderGrupper(l).map(function(g){
-        return '<span class="merke">' + esc(g.navn) + '</span>';
+    // Feltet viser den tolkede lista, ikke råteksten, så det som står her er
+    // nøyaktig de navnene rytterne kan velges inn på.
+    + '<div class="kort"><h2>Løyper</h2>'
+    + felt('Løypenavn', 'loyper', 'text', F.loypeNavn(l).join(', '))
+    + '<p class="svak" style="font-size:13px">Skriv navnene med komma, for eksempel '
+    + '<code>Kort, Lang</code>. Hver rytter settes på en løype under Deltakere, og resultatlista kan vises '
+    + 'sammenlagt eller delt per løype. Løypa påvirker ikke tidtakinga, bare hvordan resultatene sorteres. '
+    + 'Endrer du et navn her, må rytterne settes på løype på nytt.</p>'
+    + '<div class="rad">' + F.loypeNavn(l).map(function(navn){
+        return '<span class="merke">' + esc(navn) + '</span>';
       }).join('') + '</div></div>'
 
     + '<div class="kort"><h2>Hvor starter klokka?</h2>'
@@ -1048,10 +1067,15 @@ function htmlData(l){
     + (token ? '<button class="knapp fare" data-handling="loggUt">Logg ut</button>' : '')
     + '</div></div>';
 
-  h += '<div class="kort"><h2>Storskjerm</h2>'
-    + '<p class="svak" style="font-size:13px">Egen visning for TV eller projektor. Den viser rutenettet og '
-    + 'resultatlista, men aldri rundetider for ryttere som fortsatt er ute på løypa.</p>'
-    + '<button class="knapp primar" data-handling="apneTv">Åpne storskjermvisning</button></div>';
+  h += '<div class="kort"><h2>Storskjerm og plakat</h2>'
+    + '<p class="svak" style="font-size:13px">Samme visning på TV, projektor eller telefon. Den viser '
+    + 'rutenettet og resultatlista, men aldri rundetider for ryttere som fortsatt er ute på løypa.</p>'
+    + '<p class="svak" style="font-size:13px">Har dere ingen skjerm, skriv ut plakaten og heng den opp ved '
+    + 'målstreken. Publikum skanner QR-koden og får visningen på sin egen telefon.</p>'
+    + '<div class="rad" style="flex-wrap:wrap;gap:8px">'
+    + '<button class="knapp primar" data-handling="apneTv">Åpne storskjermvisning</button>'
+    + '<button class="knapp" data-handling="apnePlakat">Plakat med QR-kode</button>'
+    + '</div></div>';
 
   h += '<div class="kort"><h2>Sikkerhetskopi</h2>'
     + '<p class="svak" style="font-size:13px">Serveren lagrer fortløpende og tar kopi hvert femte minutt. '
@@ -1243,9 +1267,8 @@ function apnePanel(nr){
   });
 
   var meta = [];
-  if (d.alder != null) meta.push(d.alder + ' år');
+  if (F.loypeFor(l, d)) meta.push(F.loypeFor(l, d));
   if (d.klasse) meta.push(d.klasse);
-  if (F.aldersgruppeFor(l, d)) meta.push(F.aldersgruppeFor(l, d));
 
   el('panelInnhold').innerHTML =
     '<h3>#' + d.nr + ' ' + esc(d.navn || '') + '</h3>'
@@ -1395,6 +1418,7 @@ function handling(navn, node){
   if (navn === 'frisk') return friskOppTilstand();
   if (navn === 'tilLogginn'){ aktivFane = 'logginn'; sisteHtml = null; return tegn(); }
   if (navn === 'apneTv') return window.open('tv', '_blank');
+  if (navn === 'apnePlakat') return window.open('plakat', '_blank');
 
   if (navn === 'ukjent'){
     var uid = lagHid(), utid = na();
@@ -1456,7 +1480,7 @@ function handling(navn, node){
 
   if (navn === 'nyDeltaker'){
     var nyNr = F.nesteLedigeNr(l);
-    send({ type:'leggTilDeltakere', liste:[{ nr:nyNr, navn:'', klasse:'' }], tid:na() },
+    send({ type:'leggTilDeltakere', liste:[{ nr:nyNr, navn:'', loype:'', klasse:'' }], tid:na() },
          'ny rytter ' + nyNr, { type:'slettDeltaker', nr:nyNr, tid:na() });
     return;
   }
@@ -1526,14 +1550,23 @@ function handling(navn, node){
 }
 
 /* Tolker en limt inn startliste. Feltene etter navnet kan komme i hvilken som
-   helst rekkefølge: et lite heltall leses som alder, alt annet som klasse. */
+   helst rekkefølge: et navn som finnes blant løypene leses som løype, et lite
+   heltall som alder, alt annet som klasse. Løypa prøves først, slik at en løype
+   som er døpt med et tall ikke blir lest som alder. */
 function importerStartliste(tekst){
+  var loyper = F.loypeNavn(lop());
+  function somLoype(bit){
+    var s = bit.toLowerCase();
+    for (var j = 0; j < loyper.length; j++) if (loyper[j].toLowerCase() === s) return loyper[j];
+    return '';
+  }
+
   var linjer = tekst.split(/\r?\n/).map(function(x){ return x.trim(); }).filter(Boolean);
   var liste = [];
   linjer.forEach(function(rad){
     var deler = rad.split(/[;\t,]/).map(function(x){ return x.trim(); }).filter(function(x){ return x !== ''; });
     if (!deler.length) return;
-    var nr = null, navn = '', alder = null, klasse = '';
+    var nr = null, navn = '', loype = '', alder = null, klasse = '';
     var i = 0;
     if (deler.length > 1 && /^\d{1,4}$/.test(deler[0])){ nr = Number(deler[0]); i = 1; }
     else if (deler.length === 1){
@@ -1541,18 +1574,48 @@ function importerStartliste(tekst){
       if (m){ nr = Number(m[1]); navn = m[2]; i = deler.length; }
     }
     if (!navn && i < deler.length) navn = deler[i++];
+    // Alt som verken er løype eller alder samles opp, i stedet for at det
+    // første treffet spiser klasseplassen og resten faller på gulvet. Skriver
+    // du løypenavnet litt annerledes enn i Oppsett, mistet du før BÅDE løypa
+    // og klassen, uten et ord om det.
+    var rest = [];
     for (; i < deler.length; i++){
-      if (alder == null && /^\d{1,2}$/.test(deler[i])) alder = Number(deler[i]);
-      else if (!klasse) klasse = deler[i];
+      var treff = loype ? '' : somLoype(deler[i]);
+      if (treff) loype = treff;
+      else if (alder == null && /^\d{1,2}$/.test(deler[i])) alder = Number(deler[i]);
+      else rest.push(deler[i]);
     }
+    klasse = rest.join(' ');
     if (/^(nr|startnr|startnummer)$/i.test(String(deler[0]))) return;   // overskriftsrad
     if (!navn) return;
-    liste.push({ nr: nr, navn: navn, alder: alder, klasse: klasse });
+    liste.push({ nr: nr, navn: navn, loype: loype, alder: alder, klasse: klasse, _rest: rest });
   });
   if (!liste.length){ varsle('Fant ingen ryttere i teksten.'); return; }
+
+  // Si fra når noen ikke fikk løype. Uten en beskjed ville arrangøren først
+  // oppdaget skrivefeilen når resultatlista sto tom per løype.
+  var utenLoype = liste.filter(function(x){ return !x.loype; }).length;
+  var ukjente = {};
+  liste.forEach(function(x){
+    if (!x.loype) x._rest.forEach(function(r){ ukjente[r] = 1; });
+    delete x._rest;
+  });
+
   send({ type:'leggTilDeltakere', liste:liste, tid:na() });
-  varsle('La inn ' + liste.length + ' ryttere.');
   var k = el('limKort'); if (k) k.style.display = 'none';
+
+  if (!loyper.length){
+    varsle('La inn ' + liste.length + ' ryttere. Sett opp løypene under Oppsett, '
+      + 'så leses løypa rett fra lista neste gang.');
+  }else if (utenLoype && Object.keys(ukjente).length){
+    varsle(liste.length + ' ryttere lagt inn, men ' + utenLoype + ' fikk ingen løype. '
+      + 'Kjente løyper er ' + loyper.join(' og ') + '. Sett løypa under Deltakere, '
+      + 'eller rett navnet under Oppsett.');
+  }else if (utenLoype){
+    varsle(liste.length + ' ryttere lagt inn. ' + utenLoype + ' mangler løype, sett den under Deltakere.');
+  }else{
+    varsle('La inn ' + liste.length + ' ryttere.');
+  }
 }
 
 /* ------------------------------------------------------------------ filer */
@@ -1580,7 +1643,7 @@ function csv(rader){
 
 function eksporterResultatCsv(l){
   var antall = Number(l.antallRunder);
-  var hode = ['gruppe','plass','startnr','navn','alder','klasse'];
+  var hode = ['gruppe','plass','startnr','navn','loype','klasse'];
   for (var i=0;i<antall;i++){ hode.push('runde'+(i+1)); hode.push('runde'+(i+1)+'_sek'); }
   hode.push('avvik_sek','status');
   var rader = [hode];
@@ -1588,13 +1651,13 @@ function eksporterResultatCsv(l){
   grupperFor(l).forEach(function(g){
     var r = F.beregnResultater(l, g.pred);
     r.ferdige.forEach(function(x){
-      var rad = [g.navn || 'Sammenlagt', x.plass, x.d.nr, x.d.navn, x.d.alder == null ? '' : x.d.alder, x.d.klasse];
+      var rad = [g.navn || 'Sammenlagt', x.plass, x.d.nr, x.d.navn, F.loypeFor(l, x.d), x.d.klasse];
       for (var j=0;j<antall;j++){ rad.push(F.varighet(x.runder[j])); rad.push(F.sekTekst(x.runder[j])); }
       rad.push(F.sekTekst(x.avvik), 'Fullført');
       rader.push(rad);
     });
     r.andre.forEach(function(x){
-      var rad = [g.navn || 'Sammenlagt', '', x.d.nr, x.d.navn, x.d.alder == null ? '' : x.d.alder, x.d.klasse];
+      var rad = [g.navn || 'Sammenlagt', '', x.d.nr, x.d.navn, F.loypeFor(l, x.d), x.d.klasse];
       for (var j=0;j<antall;j++){ rad.push(F.varighet(x.runder[j])); rad.push(F.sekTekst(x.runder[j])); }
       rad.push('', x.d.status === 'OK' ? 'Ikke fullført' : x.d.status);
       rader.push(rad);
@@ -1615,9 +1678,9 @@ function eksporterPasseringerCsv(l){
 }
 
 function eksporterDeltakereCsv(l){
-  var rader = [['startnr','navn','alder','klasse','aldersgruppe','reell_start','status']];
+  var rader = [['startnr','navn','loype','alder','klasse','reell_start','status']];
   l.deltakere.slice().sort(function(a,b){ return a.nr-b.nr; }).forEach(function(d){
-    rader.push([d.nr, d.navn, d.alder == null ? '' : d.alder, d.klasse, F.aldersgruppeFor(l, d),
+    rader.push([d.nr, d.navn, F.loypeFor(l, d), d.alder == null ? '' : d.alder, d.klasse,
       d.faktiskStart != null ? F.klokkeslett(d.faktiskStart, true) : '', d.status]);
   });
   lastNed(filnavn(l) + '-startliste.csv', csv(rader), 'text/csv');
@@ -1635,11 +1698,15 @@ var ETTERNAVN = ['Nordmann','Hansen','Lie','Berg','Aas','Solheim','Moen','Vik','
 function lagTestdeltakere(l, antall){
   antall = antall || 20;
   var start = F.nesteLedigeNr(l);
+  // Testrytterne fordeles på løypene, ellers er det ingenting å gruppere på
+  // når man vil se hvordan resultatlista deler seg.
+  var loyper = F.loypeNavn(l);
   var liste = [];
   for (var i = 0; i < antall; i++){
     liste.push({
       nr: start + i,
       navn: FORNAVN[i % FORNAVN.length] + ' ' + ETTERNAVN[(i * 7) % ETTERNAVN.length],
+      loype: loyper.length ? loyper[i % loyper.length] : '',
       alder: 6 + (i % 11),
       klasse: i % 2 ? 'Gutter' : 'Jenter'
     });
