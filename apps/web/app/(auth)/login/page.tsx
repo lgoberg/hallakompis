@@ -1,11 +1,25 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { api, type Household, type Member } from '@/lib/api';
 import { trygtRetursted, stedsnavn } from '@/lib/retur';
 
+/* useSearchParams må ligge inne i en Suspense-grense, ellers nekter Next å
+   forhåndsgenerere siden og bygget stopper. Derfor dette ytre laget. */
 export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen flex items-center justify-center">
+        <div className="text-muted font-display italic">Laster …</div>
+      </main>
+    }>
+      <Innlogging />
+    </Suspense>
+  );
+}
+
+function Innlogging() {
   const router = useRouter();
   const sok = useSearchParams();
   // Gaten i de andre tjenestene sender deg hit med ?retur=, slik at et klikk
